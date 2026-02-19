@@ -4,6 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{{ isset($title) ? $title . ' — ' : '' }}PG Admin</title>
+    <link rel="icon" type="image/png" href="{{ asset('pgdb.png') }}" />
+    <link rel="apple-touch-icon" href="{{ asset('pgdb.png') }}" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -50,5 +52,11 @@
         }
     });
     </script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() { if (typeof lucide !== 'undefined') lucide.createIcons(); });
+    window.refreshLucideIcons = function() { if (typeof lucide !== 'undefined') lucide.createIcons(); };
+    </script>
+    @stack('scripts')
 </body>
 </html>

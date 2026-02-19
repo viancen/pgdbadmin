@@ -4,12 +4,14 @@
 <div class="relative min-h-screen">
     <div class="absolute inset-0 bg-grid-pattern bg-grid opacity-50"></div>
     <div class="relative z-10 mx-auto max-w-3xl px-4 py-10">
-        <div class="mb-8">
-            <a href="{{ route('login') }}" class="font-mono text-sm text-term-text-dim hover:text-term-accent">← back to login</a>
+        <div class="mb-8 flex items-center justify-between">
+            <a href="{{ route('login') }}" class="font-mono text-sm text-term-text-dim hover:text-term-accent inline-flex items-center gap-1.5"><i data-lucide="arrow-left" class="w-4 h-4 shrink-0"></i> back to login</a>
+            <img src="{{ asset('pgdb.png') }}" alt="pgdbadmin" class="h-6 w-6 shrink-0 object-contain" />
         </div>
         <div class="card border-term-border p-8">
             <p class="font-mono text-xs text-term-prompt">$ man connecting</p>
-            <h1 class="mt-2 font-mono text-2xl font-semibold text-term-text">
+            <h1 class="mt-2 font-mono text-2xl font-semibold text-term-text inline-flex items-center gap-2">
+                <i data-lucide="book-open" class="w-6 h-6 text-term-amber shrink-0"></i>
                 Verbinden met PostgreSQL — Direct & via SSH
             </h1>
             <p class="mt-3 font-mono text-sm text-term-text-dim leading-relaxed">
@@ -84,7 +86,7 @@
             </div>
 
             <div class="mt-8 border-t border-term-border pt-6">
-                <a href="{{ route('login') }}" class="btn-primary inline-flex font-mono">naar inloggen</a>
+                <a href="{{ route('login') }}" class="btn-primary inline-flex font-mono items-center gap-1.5"><i data-lucide="log-in" class="w-4 h-4 shrink-0"></i> naar inloggen</a>
             </div>
         </div>
     </div>

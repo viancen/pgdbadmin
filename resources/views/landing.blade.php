@@ -10,41 +10,43 @@
     <div class="relative z-10 mx-auto max-w-5xl px-6 pt-20 pb-24">
         <header class="mb-24 animate-fade-in">
             <div class="flex items-center justify-between">
-                <span class="font-mono text-term-text-dim">pgdbadmin@<span class="text-term-accent">v1.0</span></span>
-                <a href="{{ route('login') }}" class="btn-ghost text-term-text-dim hover:text-term-accent">login →</a>
+                <span class="font-mono text-term-text-dim inline-flex items-center gap-2">
+                    <img src="{{ asset('pgdb.png') }}" alt="" class="h-5 w-5 shrink-0 object-contain" aria-hidden="true" />
+                    pgdbadmin@<span class="text-term-accent">v1.0</span>
+                </span>
+                <a href="{{ route('login') }}" class="btn-ghost text-term-text-dim hover:text-term-accent inline-flex items-center gap-1.5"><i data-lucide="log-in" class="w-4 h-4 shrink-0"></i> login</a>
             </div>
         </header>
 
         <section class="mb-32 animate-fade-in" style="animation-delay: 0.05s">
             <p class="font-mono text-term-prompt text-sm tracking-wide">$ connect postgres://</p>
-            <h1 class="mt-4 font-mono text-4xl font-semibold tracking-tight text-term-text sm:text-5xl md:text-6xl">
-                PostgreSQL admin,<br />
-                <span class="text-term-accent">terminal-style.</span>
-            </h1>
+            <div class="mt-4 flex flex-wrap items-center gap-4">
+                <img src="{{ asset('pgdb.png') }}" alt="pgdbadmin" class="h-12 w-12 shrink-0 object-contain sm:h-14 sm:w-14" />
+                <h1 class="font-mono text-4xl font-semibold tracking-tight text-term-text sm:text-5xl md:text-6xl">
+                    PostgreSQL admin,<br />
+                    <span class="text-term-accent">terminal-style.</span>
+                </h1>
+            </div>
             <p class="mt-6 max-w-xl font-mono text-base text-term-text-dim leading-relaxed">
                 Browse schemas, run SQL, inspect structure. No GUI bloat — just a clean, technical interface for PostgreSQL 18+.
             </p>
             <div class="mt-10 flex flex-wrap items-center gap-4">
-                <a href="{{ route('login') }}" class="btn-primary px-6 py-3 font-mono">
-                    Connect to database
-                </a>
-                <a href="{{ route('docs.connecting') }}" class="btn-ghost font-mono text-term-text-dim hover:text-term-cyan">
-                    Direct & SSH tunnel docs →
-                </a>
+                <a href="{{ route('login') }}" class="btn-primary px-6 py-3 font-mono inline-flex items-center gap-2"><i data-lucide="plug" class="w-4 h-4 shrink-0"></i> Connect to database</a>
+                <a href="{{ route('docs.connecting') }}" class="btn-ghost font-mono text-term-text-dim hover:text-term-cyan inline-flex items-center gap-1.5"><i data-lucide="book-open" class="w-4 h-4 shrink-0"></i> Direct & SSH tunnel docs</a>
             </div>
         </section>
 
         <section class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             <div class="card animate-fade-in border-term-border/80 p-5" style="animation-delay: 0.1s">
-                <p class="font-mono text-xs uppercase tracking-wider text-term-amber">Schemas & tables</p>
+                <p class="font-mono text-xs uppercase tracking-wider text-term-amber inline-flex items-center gap-1.5"><i data-lucide="table-2" class="w-3.5 h-3.5"></i> Schemas & tables</p>
                 <p class="mt-2 font-mono text-sm text-term-text-dim">List tables, browse rows, paginate. One click to structure view.</p>
             </div>
             <div class="card animate-fade-in border-term-border/80 p-5" style="animation-delay: 0.15s">
-                <p class="font-mono text-xs uppercase tracking-wider text-term-amber">SQL console</p>
+                <p class="font-mono text-xs uppercase tracking-wider text-term-amber inline-flex items-center gap-1.5"><i data-lucide="code" class="w-3.5 h-3.5"></i> SQL console</p>
                 <p class="mt-2 font-mono text-sm text-term-text-dim">Run any query. SELECT limited to 500 rows; full result metadata.</p>
             </div>
             <div class="card animate-fade-in border-term-border/80 p-5" style="animation-delay: 0.2s">
-                <p class="font-mono text-xs uppercase tracking-wider text-term-amber">Structure</p>
+                <p class="font-mono text-xs uppercase tracking-wider text-term-amber inline-flex items-center gap-1.5"><i data-lucide="columns-2" class="w-3.5 h-3.5"></i> Structure</p>
                 <p class="mt-2 font-mono text-sm text-term-text-dim">Column names, types, nullability, defaults — no fluff.</p>
             </div>
         </section>
@@ -65,9 +67,10 @@
             </div>
         </section>
 
-        <footer class="mt-32 border-t border-term-border pt-8 font-mono text-xs text-term-text-dim">
+        <footer class="mt-32 border-t border-term-border pt-8 font-mono text-xs text-term-text-dim flex flex-wrap items-center gap-4">
+            <img src="{{ asset('pgdb.png') }}" alt="pgdbadmin" class="h-5 w-5 shrink-0 object-contain opacity-80" />
             <a href="{{ route('login') }}" class="hover:text-term-accent">Login</a>
-            <span class="mx-2">·</span>
+            <span class="text-term-muted">·</span>
             <a href="{{ route('docs.connecting') }}" class="hover:text-term-accent">Connecting (NL)</a>
         </footer>
     </div>

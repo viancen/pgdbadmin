@@ -13,8 +13,8 @@
             {!! $body ?? $slot ?? '' !!}
         </div>
         <div class="modal-footer flex justify-end gap-2 border-t border-term-border px-5 py-4">
-            <button type="button" class="modal-cancel btn-secondary font-mono text-sm" data-modal-close>{{ $cancelLabel ?? 'Cancel' }}</button>
-            <button type="button" class="modal-confirm btn-primary font-mono text-sm">{{ $confirmLabel ?? 'Confirm' }}</button>
+            <button type="button" class="modal-cancel btn-secondary font-mono text-sm inline-flex items-center gap-1.5" data-modal-close><i data-lucide="x" class="w-4 h-4 shrink-0"></i>{{ $cancelLabel ?? 'Cancel' }}</button>
+            <button type="button" class="modal-confirm btn-primary font-mono text-sm inline-flex items-center gap-1.5"><i data-lucide="check" class="w-4 h-4 shrink-0"></i>{{ $confirmLabel ?? 'Confirm' }}</button>
         </div>
     </div>
 </div>

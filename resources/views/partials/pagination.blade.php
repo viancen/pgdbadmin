@@ -6,11 +6,11 @@
 @if($totalPages > 1 && !empty($baseUrl))
 <div class="flex items-center gap-2 font-mono text-xs">
     @if($page > 1)
-    <a href="{{ $baseUrl }}{{ $sep }}limit={{ $limit }}&offset={{ max(0, $offset - $limit) }}" class="btn-secondary text-xs">prev</a>
+    <a href="{{ $baseUrl }}{{ $sep }}limit={{ $limit }}&offset={{ max(0, $offset - $limit) }}" class="btn-secondary text-xs inline-flex items-center gap-1"><i data-lucide="chevron-left" class="w-3.5 h-3.5 shrink-0"></i> prev</a>
     @endif
     <span class="text-term-text-dim">page {{ $page }} / {{ $totalPages }}</span>
     @if($page < $totalPages)
-    <a href="{{ $baseUrl }}{{ $sep }}limit={{ $limit }}&offset={{ $offset + $limit }}" class="btn-secondary text-xs">next</a>
+    <a href="{{ $baseUrl }}{{ $sep }}limit={{ $limit }}&offset={{ $offset + $limit }}" class="btn-secondary text-xs inline-flex items-center gap-1">next <i data-lucide="chevron-right" class="w-3.5 h-3.5 shrink-0"></i></a>
     @endif
 </div>
 @endif

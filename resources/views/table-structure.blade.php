@@ -3,22 +3,23 @@
 @section('content')
 <div class="p-6">
     <div class="mb-6 flex flex-wrap items-center gap-4">
-        <a href="{{ route('home') }}" class="btn-ghost text-sm font-mono">← database</a>
+        <a href="{{ route('home') }}" class="btn-ghost text-sm font-mono inline-flex items-center gap-1.5"><i data-lucide="arrow-left" class="w-4 h-4 shrink-0"></i> database</a>
         <div>
             <p class="font-mono text-xs text-term-text-dim">structure</p>
-            <h1 class="font-mono text-xl font-semibold text-term-text">
+            <h1 class="font-mono text-xl font-semibold text-term-text inline-flex items-center gap-2">
+                <i data-lucide="columns-2" class="w-5 h-5 text-term-accent shrink-0"></i>
                 <span class="badge-schema">{{ $schema }}</span>.<span class="text-term-accent">{{ $tableName }}</span>
             </h1>
         </div>
-        <a href="{{ route('table.browse', ['schema' => $schema, 'table' => $tableName]) }}" class="btn-secondary text-sm font-mono">browse</a>
-        <a href="{{ route('query.index', ['table' => $schema . '.' . $tableName]) }}" class="btn-primary text-sm font-mono">sql</a>
+        <a href="{{ route('table.browse', ['schema' => $schema, 'table' => $tableName]) }}" class="btn-secondary text-sm font-mono inline-flex items-center gap-1.5"><i data-lucide="table-2" class="w-4 h-4 shrink-0"></i> browse</a>
+        <a href="{{ route('query.index', ['table' => $schema . '.' . $tableName]) }}" class="btn-primary text-sm font-mono inline-flex items-center gap-1.5"><i data-lucide="code" class="w-4 h-4 shrink-0"></i> sql</a>
     </div>
 
     {{-- Columns --}}
     <div class="card overflow-hidden mb-6">
         <div class="card-header flex flex-wrap items-center justify-between gap-2">
             <h2 class="font-mono font-medium text-term-text">columns</h2>
-            <button type="button" class="btn-primary text-sm font-mono" data-modal="structure-add-modal">+ add column</button>
+            <button type="button" class="btn-primary text-sm font-mono inline-flex items-center gap-1.5" data-modal="structure-add-modal"><i data-lucide="plus-circle" class="w-4 h-4 shrink-0"></i> add column</button>
         </div>
         <div class="table-container">
             <table class="data-table">
@@ -39,8 +40,8 @@
                         <td class="font-mono text-term-text-dim">{{ $col->notnull ? 'NO' : 'YES' }}</td>
                         <td class="font-mono text-term-text-dim">{{ $col->default ?? '—' }}</td>
                         <td class="font-mono text-xs">
-                            <button type="button" class="structure-edit-col btn-ghost text-term-accent py-0.5 px-1 text-xs" data-column="{{ $col->name }}" data-type="{{ e($col->type) }}" data-notnull="{{ $col->notnull ? '1' : '0' }}" data-default="{{ e($col->default ?? '') }}">edit</button>
-                            <button type="button" class="structure-drop-col btn-ghost text-term-danger py-0.5 px-1 text-xs" data-column="{{ $col->name }}">drop</button>
+                            <button type="button" class="structure-edit-col btn-ghost text-term-accent py-0.5 px-1 text-xs inline-flex items-center gap-1" data-column="{{ $col->name }}" data-type="{{ e($col->type) }}" data-notnull="{{ $col->notnull ? '1' : '0' }}" data-default="{{ e($col->default ?? '') }}"><i data-lucide="pencil" class="w-3.5 h-3.5 shrink-0"></i> edit</button>
+                            <button type="button" class="structure-drop-col btn-ghost text-term-danger py-0.5 px-1 text-xs inline-flex items-center gap-1" data-column="{{ $col->name }}"><i data-lucide="trash-2" class="w-3.5 h-3.5 shrink-0"></i> drop</button>
                         </td>
                     </tr>
                     @endforeach

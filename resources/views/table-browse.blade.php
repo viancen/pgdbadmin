@@ -1,9 +1,14 @@
 @php
+    use Illuminate\Support\Str;
     $baseParams = array_filter(['sql' => $sql ?? null, 'limit' => $limit]);
     $baseUrl = route('table.browse', ['schema' => $schema, 'table' => $tableName]) . '?' . http_build_query(array_merge($baseParams, array_filter(['sort' => $sort ?? null, 'dir' => $dir ?? null])));
     $columnMeta = [];
+    $columnLinkedTables = [];
     foreach ($columns ?? [] as $c) {
         $columnMeta[$c->name] = ['type' => $c->type ?? '', 'notnull' => !empty($c->notnull), 'is_pk' => in_array($c->name, $primaryKey ?? [], true)];
+        if (Str::endsWith($c->name, '_id')) {
+            $columnLinkedTables[$c->name] = Str::plural(Str::beforeLast($c->name, '_id'));
+        }
     }
     $canEditRows = !empty($primaryKey) && ($sql === null || $sql === '' || trim($sql ?? '') === trim($defaultSql));
 @endphp
@@ -12,15 +17,16 @@
 @section('content')
 <div class="p-6">
     <div class="mb-6 flex flex-wrap items-center gap-4">
-        <a href="{{ route('home') }}" class="btn-ghost text-sm font-mono">← database</a>
+        <a href="{{ route('home') }}" class="btn-ghost text-sm font-mono inline-flex items-center gap-1.5"><i data-lucide="arrow-left" class="w-4 h-4 shrink-0"></i> database</a>
         <div>
             <p class="font-mono text-xs text-term-text-dim">table</p>
-            <h1 class="font-mono text-xl font-semibold text-term-text">
+            <h1 class="font-mono text-xl font-semibold text-term-text inline-flex items-center gap-2">
+                <i data-lucide="table-2" class="w-5 h-5 text-term-accent shrink-0"></i>
                 <span class="badge-schema">{{ $schema }}</span>.<span class="text-term-accent">{{ $tableName }}</span>
             </h1>
         </div>
-        <a href="{{ route('table.structure', ['schema' => $schema, 'table' => $tableName]) }}" class="btn-secondary text-sm font-mono">structure</a>
-        <a href="{{ route('query.index', ['table' => $schema . '.' . $tableName]) }}" class="btn-primary text-sm font-mono">sql</a>
+        <a href="{{ route('table.structure', ['schema' => $schema, 'table' => $tableName]) }}" class="btn-secondary text-sm font-mono inline-flex items-center gap-1.5"><i data-lucide="columns-2" class="w-4 h-4 shrink-0"></i> structure</a>
+        <a href="{{ route('query.index', ['table' => $schema . '.' . $tableName]) }}" class="btn-primary text-sm font-mono inline-flex items-center gap-1.5"><i data-lucide="code" class="w-4 h-4 shrink-0"></i> sql</a>
     </div>
 
     {{-- Query box: run custom SQL on this table with pagination --}}
@@ -33,7 +39,7 @@
             <span class="text-term-text-dim text-xs">Default: SELECT * FROM table LIMIT 100 — change and run to filter/sort.</span>
             <div class="flex items-center gap-2">
                 <input type="hidden" name="limit" value="{{ $limit }}" />
-                <button type="submit" class="btn-primary font-mono text-sm">Run query</button>
+                <button type="submit" class="btn-primary font-mono text-sm inline-flex items-center gap-1.5"><i data-lucide="play" class="w-4 h-4 shrink-0"></i> Run query</button>
             </div>
         </div>
     </form>
@@ -44,13 +50,15 @@
             @include('partials.pagination', ['total' => $total, 'limit' => $limit, 'offset' => $offset, 'baseUrl' => $baseUrl])
         </div>
         <div class="table-container max-h-[70vh] overflow-auto">
-            <table class="data-table" id="table-browse-data"
+            <table class="data-table" id="table-browse-data" tabindex="0"
                 data-schema="{{ $schema }}"
                 data-table="{{ $tableName }}"
+                data-browse-base-url="{{ route('table.browse', ['schema' => $schema, 'table' => $tableName]) }}"
                 data-update-url="{{ route('table.row.update', ['schema' => $schema, 'table' => $tableName]) }}"
                 data-can-edit="{{ $canEditRows ? '1' : '0' }}"
                 data-csrf="{{ csrf_token() }}"
-                data-column-meta="{{ json_encode($columnMeta) }}">
+                data-column-meta="{{ json_encode($columnMeta) }}"
+                data-column-linked-tables="{{ json_encode($columnLinkedTables) }}">
                 <thead>
                     <tr>
                         @foreach($fields ?? [] as $f)
@@ -63,7 +71,7 @@
                             <a href="{{ $sortUrl }}" class="inline-flex items-center gap-1 hover:text-term-accent focus:outline-none focus:ring-2 focus:ring-term-accent/50 rounded {{ $isSortCol ? 'text-term-accent' : 'text-term-amber' }}">
                                 {{ $f->name }}
                                 @if($isSortCol)
-                                <span class="text-term-text-dim" aria-hidden="true">{{ ($dir ?? 'ASC') === 'DESC' ? '↓' : '↑' }}</span>
+                                <i data-lucide="{{ ($dir ?? 'ASC') === 'DESC' ? 'arrow-down' : 'arrow-up' }}" class="w-3.5 h-3.5 text-term-text-dim shrink-0" aria-hidden="true"></i>
                                 @endif
                             </a>
                         </th>
@@ -77,7 +85,7 @@
                         @if($canEditRows) title="Double-click to edit" @endif>
                         @foreach($fields ?? [] as $f)
                         @php $meta = $columnMeta[$f->name] ?? null; $isPk = $meta['is_pk'] ?? false; @endphp
-                        <td class="max-w-xs truncate font-mono text-xs table-browse-cell"
+                        <td class="max-w-xs font-mono text-xs table-browse-cell align-middle table-browse-td"
                             data-column="{{ $f->name }}"
                             data-value="{{ e($row[$f->name] ?? '') }}"
                             @if($meta) data-type="{{ e($meta['type']) }}" data-notnull="{{ $meta['notnull'] ? '1' : '0' }}" data-is-pk="{{ $isPk ? '1' : '0' }}" @endif
@@ -85,7 +93,19 @@
                             @if(($row[$f->name] ?? null) === null)
                             <span class="text-term-muted">NULL</span>
                             @else
-                            {{ $row[$f->name] }}
+                            <span class="inline-flex items-center gap-1 truncate max-w-full">
+                                <span class="truncate">{{ $row[$f->name] }}</span>
+                                @if(Str::endsWith($f->name, '_id'))
+                                @php
+                                    $linkedTable = Str::plural(Str::beforeLast($f->name, '_id'));
+                                    $rawVal = $row[$f->name];
+                                    $sqlVal = is_numeric($rawVal) ? (string) $rawVal : "'" . str_replace("'", "''", $rawVal) . "'";
+                                    $linkSql = 'SELECT * FROM "' . $schema . '"."' . $linkedTable . '" WHERE "id" = ' . $sqlVal . ' LIMIT 100';
+                                    $linkUrl = route('table.browse', ['schema' => $schema, 'table' => $linkedTable]) . '?sql=' . rawurlencode($linkSql);
+                                @endphp
+                                <a href="{{ $linkUrl }}" class="shrink-0 inline-flex items-center text-term-accent hover:text-term-amber focus:outline-none focus:ring-2 focus:ring-term-accent/50 rounded" title="View linked record in {{ $linkedTable }}"><i data-lucide="link" class="w-3.5 h-3.5"></i></a>
+                                @endif
+                            </span>
                             @endif
                         </td>
                         @endforeach
@@ -100,6 +120,67 @@
     </div>
 </div>
 
+<script>
+(function() {
+    var table = document.getElementById('table-browse-data');
+    if (!table) return;
+    var allCells = function() { return table.querySelectorAll('tbody .table-browse-td'); };
+    var focusedCell = null;
+
+    function setFocus(td) {
+        if (focusedCell) focusedCell.classList.remove('cell-focused');
+        focusedCell = td;
+        if (td) {
+            td.classList.add('cell-focused');
+            td.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+            table.focus();
+        }
+    }
+
+    table.addEventListener('click', function(e) {
+        var td = e.target.closest('.table-browse-td');
+        if (td) setFocus(td);
+    });
+
+    table.addEventListener('keydown', function(e) {
+        if (!focusedCell) return;
+        var key = e.key;
+        var tr = focusedCell.closest('tr');
+        var cells = Array.from(tr.querySelectorAll('.table-browse-td'));
+        var colIndex = cells.indexOf(focusedCell);
+        var rows = Array.from(table.querySelectorAll('tbody tr'));
+        var rowIndex = rows.indexOf(tr);
+
+        if (key === 'ArrowLeft') {
+            e.preventDefault();
+            if (colIndex > 0) setFocus(cells[colIndex - 1]);
+        } else if (key === 'ArrowRight') {
+            e.preventDefault();
+            if (colIndex < cells.length - 1) setFocus(cells[colIndex + 1]);
+        } else if (key === 'ArrowUp') {
+            e.preventDefault();
+            if (rowIndex > 0) {
+                var prevRow = rows[rowIndex - 1];
+                var prevCells = prevRow.querySelectorAll('.table-browse-td');
+                if (prevCells[colIndex]) setFocus(prevCells[colIndex]);
+            }
+        } else if (key === 'ArrowDown') {
+            e.preventDefault();
+            if (rowIndex < rows.length - 1) {
+                var nextRow = rows[rowIndex + 1];
+                var nextCells = nextRow.querySelectorAll('.table-browse-td');
+                if (nextCells[colIndex]) setFocus(nextCells[colIndex]);
+            }
+        } else if (key === 'Enter') {
+            e.preventDefault();
+            if (table.dataset.canEdit === '1') {
+                tr.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true, view: window }));
+            }
+        }
+    });
+})();
+</script>
+
 @if($canEditRows)
 {{-- Edit row modal: double-click a row to open --}}
 <div id="row-edit-modal" class="modal-backdrop fixed inset-0 z-50 hidden flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="row-edit-modal-title">
@@ -110,8 +191,8 @@
         </div>
         <div class="modal-body px-5 py-4 overflow-y-auto font-mono text-sm text-term-text-dim space-y-3" id="row-edit-form-container"></div>
         <div class="modal-footer flex justify-end gap-2 border-t border-term-border px-5 py-4 shrink-0">
-            <button type="button" class="modal-cancel btn-secondary font-mono text-sm" data-modal-close>Cancel</button>
-            <button type="button" class="row-edit-save btn-primary font-mono text-sm">Save</button>
+            <button type="button" class="modal-cancel btn-secondary font-mono text-sm inline-flex items-center gap-1.5" data-modal-close><i data-lucide="x" class="w-4 h-4 shrink-0"></i> Cancel</button>
+            <button type="button" class="row-edit-save btn-primary font-mono text-sm inline-flex items-center gap-1.5"><i data-lucide="save" class="w-4 h-4 shrink-0"></i> Save</button>
         </div>
         <div id="row-edit-error" class="hidden px-5 pb-4 text-term-danger text-xs font-mono"></div>
     </div>
@@ -123,12 +204,22 @@
     if (!table || table.dataset.canEdit !== '1') return;
     const updateUrl = table.dataset.updateUrl;
     const csrf = table.dataset.csrf;
+    const schema = table.dataset.schema || 'public';
     const columnMeta = JSON.parse(table.dataset.columnMeta || '{}');
+    const columnLinkedTables = JSON.parse(table.dataset.columnLinkedTables || '{}');
     const modal = document.getElementById('row-edit-modal');
     const formContainer = document.getElementById('row-edit-form-container');
     const saveBtn = document.querySelector('.row-edit-save');
     const errorEl = document.getElementById('row-edit-error');
     let currentTr = null;
+
+    function linkedRecordUrl(columnName, value) {
+        var linkedTable = columnLinkedTables[columnName];
+        if (!linkedTable || value === null || value === undefined) return null;
+        var sqlVal = (typeof value === 'number' || (typeof value === 'string' && /^\d+$/.test(value))) ? value : "'" + String(value).replace(/'/g, "''") + "'";
+        var sql = 'SELECT * FROM "' + schema + '"."' + linkedTable + '" WHERE "id" = ' + sqlVal + ' LIMIT 100';
+        return window.location.origin + '/table/' + encodeURIComponent(schema) + '/' + encodeURIComponent(linkedTable) + '?sql=' + encodeURIComponent(sql);
+    }
 
     function numericType(type) {
         if (!type) return false;
@@ -190,6 +281,16 @@
                     readOnly.className = 'rounded border border-term-border bg-term-bg/50 px-3 py-2 text-term-text font-mono text-xs';
                     readOnly.textContent = displayVal === '' ? 'NULL' : displayVal;
                     rowEl.appendChild(readOnly);
+                    var pkLinkUrl = linkedRecordUrl(col, currentVal);
+                    if (pkLinkUrl) {
+                        var pkLink = document.createElement('a');
+                        pkLink.href = pkLinkUrl;
+                        pkLink.target = '_blank';
+                        pkLink.rel = 'noopener noreferrer';
+                        pkLink.className = 'mt-1 inline-flex items-center gap-1 text-term-accent hover:text-term-amber text-xs';
+                        pkLink.innerHTML = '<i data-lucide="external-link" class="w-3.5 h-3.5 shrink-0"></i> View linked record';
+                        rowEl.appendChild(pkLink);
+                    }
                 } else {
                     const inputType = getInputType(meta);
                     let input;
@@ -210,10 +311,21 @@
                     const err = document.createElement('div');
                     err.className = 'row-edit-field-error text-term-danger text-xs hidden';
                     rowEl.appendChild(err);
+                    var linkUrl = linkedRecordUrl(col, currentVal);
+                    if (linkUrl) {
+                        var link = document.createElement('a');
+                        link.href = linkUrl;
+                        link.target = '_blank';
+                        link.rel = 'noopener noreferrer';
+                        link.className = 'mt-1 inline-flex items-center gap-1 text-term-accent hover:text-term-amber text-xs';
+                        link.innerHTML = '<i data-lucide="external-link" class="w-3.5 h-3.5 shrink-0"></i> View linked record';
+                        rowEl.appendChild(link);
+                    }
                 }
                 formContainer.appendChild(rowEl);
             });
 
+            if (window.refreshLucideIcons) window.refreshLucideIcons();
             modal.classList.remove('hidden');
         });
     });
