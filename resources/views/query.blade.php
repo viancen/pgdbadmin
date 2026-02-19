@@ -254,9 +254,7 @@
                     linkContainer.innerHTML = '';
                     if (col && col.lastIndexOf('_id') === col.length - 3 && val !== '' && val !== 'null') {
                         var linkedTable = col.slice(0, -3) + 's';
-                        var sqlVal = /^\d+$/.test(String(val)) ? val : "'" + String(val).replace(/'/g, "''") + "'";
-                        var sql = 'SELECT * FROM "' + schema + '"."' + linkedTable + '" WHERE "id" = ' + sqlVal + ' LIMIT 100';
-                        var href = window.location.origin + '/table/' + encodeURIComponent(schema) + '/' + encodeURIComponent(linkedTable) + '?sql=' + encodeURIComponent(sql);
+                        var href = window.location.origin + '/table/' + encodeURIComponent(schema) + '/' + encodeURIComponent(linkedTable) + '?id=' + encodeURIComponent(String(val));
                         var a = document.createElement('a');
                         a.href = href;
                         a.target = '_blank';

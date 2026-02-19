@@ -100,9 +100,7 @@
                                 @php
                                     $linkedTable = Str::plural(Str::beforeLast($f->name, '_id'));
                                     $rawVal = $row[$f->name];
-                                    $sqlVal = is_numeric($rawVal) ? (string) $rawVal : "'" . str_replace("'", "''", $rawVal) . "'";
-                                    $linkSql = 'SELECT * FROM "' . $schema . '"."' . $linkedTable . '" WHERE "id" = ' . $sqlVal . ' LIMIT 100';
-                                    $linkUrl = route('table.browse', ['schema' => $schema, 'table' => $linkedTable]) . '?sql=' . rawurlencode($linkSql);
+                                    $linkUrl = route('table.browse', ['schema' => $schema, 'table' => $linkedTable]) . '?id=' . rawurlencode((string) $rawVal);
                                 @endphp
                                 <a href="{{ $linkUrl }}" target="_blank" rel="noopener noreferrer" class="shrink-0 inline-flex items-center text-term-accent hover:text-term-amber focus:outline-none focus:ring-2 focus:ring-term-accent/50 rounded" title="View linked record in {{ $linkedTable }} (new tab)"><i data-lucide="link" class="w-3.5 h-3.5"></i></a>
                                 @endif
@@ -321,9 +319,8 @@
     function linkedRecordUrl(columnName, value) {
         var linkedTable = columnLinkedTables[columnName];
         if (!linkedTable || value === null || value === undefined) return null;
-        var sqlVal = (typeof value === 'number' || (typeof value === 'string' && /^\d+$/.test(value))) ? value : "'" + String(value).replace(/'/g, "''") + "'";
-        var sql = 'SELECT * FROM "' + schema + '"."' + linkedTable + '" WHERE "id" = ' + sqlVal + ' LIMIT 100';
-        return window.location.origin + '/table/' + encodeURIComponent(schema) + '/' + encodeURIComponent(linkedTable) + '?sql=' + encodeURIComponent(sql);
+        var idVal = (typeof value === 'number') ? String(value) : String(value);
+        return window.location.origin + '/table/' + encodeURIComponent(schema) + '/' + encodeURIComponent(linkedTable) + '?id=' + encodeURIComponent(idVal);
     }
 
     function numericType(type) {

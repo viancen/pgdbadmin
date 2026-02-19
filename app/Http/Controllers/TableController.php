@@ -46,6 +46,18 @@ class TableController extends Controller
                 ? "SELECT * FROM {$quotedTable} ORDER BY \"id\" DESC LIMIT 100"
                 : "SELECT * FROM {$quotedTable} LIMIT 100";
 
+            // Link to single record: ?id=value uses primary key (avoids long sql= and encoding issues)
+            $idParam = $request->query('id');
+            if ($idParam !== null && $idParam !== '' && $primaryKey !== []) {
+                $idVal = trim((string) $idParam);
+                if ($idVal !== '') {
+                    $pkCol = $primaryKey[0];
+                    $quotedPkCol = '"' . str_replace('"', '""', $pkCol) . '"';
+                    $escapedVal = "'" . str_replace("'", "''", $idVal) . "'";
+                    $customSql = "SELECT * FROM {$quotedTable} WHERE {$quotedPkCol} = {$escapedVal} LIMIT {$limit}";
+                }
+            }
+
             if ($customSql !== null && $customSql !== '') {
                 $orderBy = $sort !== null && $sort !== '' ? $sort : null;
                 $data = $this->pg->executeSelectWithPagination($pdo, $customSql, $limit, $offset, $orderBy, $dir);
