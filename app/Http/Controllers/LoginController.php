@@ -5,7 +5,8 @@ namespace App\Http\Controllers;
 use App\Services\PgConnectionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class LoginController extends Controller
 {
@@ -13,15 +14,15 @@ class LoginController extends Controller
         private PgConnectionService $pg
     ) {}
 
-    public function show(Request $request): View|RedirectResponse
+    public function show(Request $request): Response|RedirectResponse
     {
         if ($request->session()->has('pg_credentials')) {
             return redirect()->route('home');
         }
-        return view('login', ['title' => 'Login', 'showNav' => false]);
+        return Inertia::render('Login', ['title' => 'Login']);
     }
 
-    public function store(Request $request): View|RedirectResponse
+    public function store(Request $request): Response|RedirectResponse
     {
         $credentials = [
             'host' => trim($request->input('host', 'localhost') ?: 'localhost'),
@@ -32,9 +33,8 @@ class LoginController extends Controller
         ];
 
         if ($credentials['user'] === '') {
-            return view('login', [
+            return Inertia::render('Login', [
                 'title' => 'Login',
-                'showNav' => false,
                 'error' => 'User is required',
                 'host' => $credentials['host'],
                 'port' => $credentials['port'],
@@ -45,9 +45,8 @@ class LoginController extends Controller
 
         $test = $this->pg->testConnection($credentials);
         if (! $test['ok']) {
-            return view('login', [
+            return Inertia::render('Login', [
                 'title' => 'Login',
-                'showNav' => false,
                 'error' => $test['message'] ?? 'Connection failed',
                 'host' => $credentials['host'],
                 'port' => $credentials['port'],

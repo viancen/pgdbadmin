@@ -6,7 +6,8 @@ use App\Services\PgConnectionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class QueryController extends Controller
 {
@@ -16,20 +17,17 @@ class QueryController extends Controller
         private PgConnectionService $pg
     ) {}
 
-    public function index(Request $request): View
+    public function index(Request $request): Response
     {
         $sql = $request->query('table') ? 'SELECT * FROM ' . $request->query('table') . ' LIMIT 100' : '';
-        return view('query', [
+        return Inertia::render('Query/Index', [
             'title' => 'SQL Query',
             'sql' => $sql,
             'currentDb' => $request->session()->get('pg_current_db'),
-            'databases' => $request->session()->get('pg_databases', []),
-            'user' => $request->session()->get('pg_credentials')['user'] ?? '',
-            'host' => $request->session()->get('pg_credentials')['host'] ?? '',
         ]);
     }
 
-    public function execute(Request $request): View|RedirectResponse
+    public function execute(Request $request): Response|RedirectResponse
     {
         $credentials = $request->session()->get('pg_credentials');
         $currentDb = $request->session()->get('pg_current_db');
@@ -60,9 +58,6 @@ class QueryController extends Controller
             'title' => 'SQL Query',
             'sql' => $sql,
             'currentDb' => $currentDb,
-            'databases' => $request->session()->get('pg_databases', []),
-            'user' => $credentials['user'],
-            'host' => $credentials['host'],
             'sort' => $sort,
             'dir' => $dir,
         ];
@@ -79,7 +74,7 @@ class QueryController extends Controller
             $viewData['error'] = $e->getMessage();
         }
 
-        return view('query', $viewData);
+        return Inertia::render('Query/Index', $viewData);
     }
 
     /**

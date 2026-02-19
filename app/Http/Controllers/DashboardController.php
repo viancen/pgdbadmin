@@ -5,7 +5,8 @@ namespace App\Http\Controllers;
 use App\Services\PgConnectionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class DashboardController extends Controller
 {
@@ -13,11 +14,11 @@ class DashboardController extends Controller
         private PgConnectionService $pg
     ) {}
 
-    public function index(Request $request): View|RedirectResponse
+    public function index(Request $request): Response|RedirectResponse
     {
         $credentials = $request->session()->get('pg_credentials');
         if (! $credentials) {
-            return view('landing', ['title' => 'PG Admin', 'showNav' => false]);
+            return Inertia::render('Landing', ['title' => 'PG Admin']);
         }
 
         $currentDb = $request->session()->get('pg_current_db');
@@ -30,26 +31,17 @@ class DashboardController extends Controller
         try {
             $tables = $this->pg->listTables($pdo);
         } catch (\Throwable $e) {
-            $tables = [];
-            return view('dashboard', [
+            return Inertia::render('Dashboard', [
                 'title' => 'Dashboard',
-                'showNav' => true,
                 'currentDb' => $currentDb,
-                'databases' => $request->session()->get('pg_databases', []),
-                'user' => $credentials['user'],
-                'host' => $credentials['host'],
                 'tables' => [],
                 'error' => $e->getMessage(),
             ]);
         }
 
-        return view('dashboard', [
+        return Inertia::render('Dashboard', [
             'title' => 'Dashboard',
-            'showNav' => true,
             'currentDb' => $currentDb,
-            'databases' => $request->session()->get('pg_databases', []),
-            'user' => $credentials['user'],
-            'host' => $credentials['host'],
             'tables' => $tables,
         ]);
     }

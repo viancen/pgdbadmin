@@ -6,7 +6,8 @@ use App\Services\PgConnectionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class TableController extends Controller
 {
@@ -18,7 +19,7 @@ class TableController extends Controller
         private PgConnectionService $pg
     ) {}
 
-    public function browse(Request $request, string $schema, string $table): View|RedirectResponse
+    public function browse(Request $request, string $schema, string $table): Response|RedirectResponse
     {
         $credentials = $request->session()->get('pg_credentials');
         $currentDb = $request->session()->get('pg_current_db');
@@ -75,7 +76,7 @@ class TableController extends Controller
         $sort = $sort ?? ($hasId && ($customSql === null || $customSql === '') ? 'id' : null);
         $dir = ($sort === 'id' && ($customSql === null || $customSql === '') && ($request->query('sort') === null)) ? 'DESC' : $dir;
 
-        return view('table-browse', [
+        return Inertia::render('Table/Browse', [
             'title' => "{$schema}.{$table}",
             'schema' => $schema,
             'tableName' => $table,
@@ -90,14 +91,10 @@ class TableController extends Controller
             'primaryKey' => $primaryKey,
             'sort' => $sort,
             'dir' => $dir,
-            'currentDb' => $currentDb,
-            'databases' => $request->session()->get('pg_databases', []),
-            'user' => $credentials['user'],
-            'host' => $credentials['host'],
         ]);
     }
 
-    public function structure(Request $request, string $schema, string $table): View|RedirectResponse
+    public function structure(Request $request, string $schema, string $table): Response|RedirectResponse
     {
         $credentials = $request->session()->get('pg_credentials');
         $currentDb = $request->session()->get('pg_current_db');
@@ -114,16 +111,12 @@ class TableController extends Controller
             abort(500, $e->getMessage());
         }
 
-        return view('table-structure', [
+        return Inertia::render('Table/Structure', [
             'title' => "Structure {$schema}.{$table}",
             'schema' => $schema,
             'tableName' => $table,
             'columns' => $columns,
-            'constraints' => $constraints,
-            'currentDb' => $currentDb,
-            'databases' => $request->session()->get('pg_databases', []),
-            'user' => $credentials['user'],
-            'host' => $credentials['host'],
+            'constraints' => $constraints ?? [],
         ]);
     }
 

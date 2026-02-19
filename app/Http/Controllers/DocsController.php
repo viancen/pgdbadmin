@@ -2,15 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\View\View;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class DocsController extends Controller
 {
-    public function connecting(): View
+    public function connecting(): Response
     {
-        return view('docs-connecting', [
+        return Inertia::render('Docs/Connecting', [
             'title' => 'Verbinden met PostgreSQL',
-            'showNav' => false,
         ]);
     }
 }
