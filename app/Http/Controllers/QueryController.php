@@ -46,11 +46,12 @@ class QueryController extends Controller
 
         // If the query contains LIMIT n, respect it but cap at MAX_PAGE_SIZE; otherwise default to MAX to avoid unbounded fetches
         $userLimit = null;
-        if (preg_match('/\bLIMIT\s+(\d+)/i', $sql, $m)) {
-            $userLimit = (int) $m[1];
+        if (preg_match_all('/\bLIMIT\s*(\d+)/i', $sql, $m)) {
+            $userLimit = (int) end($m[1]); // use outermost (last) LIMIT
         }
         $maxRows = $userLimit !== null ? min($userLimit, self::MAX_PAGE_SIZE) : self::MAX_PAGE_SIZE;
-        $limit = min((int) ($request->input('limit') ?: $maxRows), $maxRows);
+        $requestLimit = (int) $request->input('limit');
+        $limit = $requestLimit > 0 ? min($requestLimit, $maxRows) : $maxRows;
         $offset = max(0, (int) ($request->input('offset') ?: 0));
         $sort = $request->input('sort') ? trim($request->input('sort')) : null;
         $dir = strtoupper((string) $request->input('dir')) === 'DESC' ? 'DESC' : 'ASC';

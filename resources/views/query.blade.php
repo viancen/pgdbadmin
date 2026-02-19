@@ -11,6 +11,7 @@
         @csrf
         <input type="hidden" name="sort" id="query-sort" value="{{ $sort ?? '' }}" />
         <input type="hidden" name="dir" id="query-dir" value="{{ $dir ?? 'ASC' }}" />
+        <input type="hidden" name="limit" id="query-limit" value="{{ $result['limit'] ?? '' }}" />
         <input type="hidden" name="offset" id="query-offset" value="{{ $result['offset'] ?? 0 }}" />
         <div class="border-b border-term-border p-5">
             <textarea name="sql" id="sql" rows="10" class="input font-mono text-sm" placeholder="SELECT * FROM my_table LIMIT 10;" title="Cmd+Enter to execute">{{ $sql ?? '' }}</textarea>

@@ -316,9 +316,9 @@ class PgConnectionService
             $orderClause = ($orderBy !== null && $orderBy !== '') ? ' ORDER BY ' . $this->quoteIdent($orderBy) . ' ' . $orderDir : '';
 
             $sql = trim(rtrim($sql, ';'));
-            $sql = preg_replace('/\s*OFFSET\s+\d+/i', '', $sql);
-            $sql = preg_replace('/\s*LIMIT\s+\d+/i', '', $sql);
-            $sql = preg_replace('/\s*ORDER BY\s+.+?(?=\s*LIMIT\s|\s*$)/is', '', $sql);
+            $sql = preg_replace('/\s*OFFSET\s*\d+/i', '', $sql);
+            $sql = preg_replace('/\s*LIMIT\s*\d+/i', '', $sql);
+            $sql = preg_replace('/\s*ORDER BY\s+.+?(?=\s*LIMIT\s*\d+|\s*$)/is', '', $sql);
             $sql = rtrim($sql, '; ');
             $sql .= $orderClause . " LIMIT {$limit} OFFSET {$offset}";
 
