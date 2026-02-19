@@ -1,0 +1,115 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+@theme {
+    --font-sans: 'IBM Plex Mono', 'JetBrains Mono', ui-monospace, monospace;
+    --font-mono: 'IBM Plex Mono', 'JetBrains Mono', ui-monospace, monospace;
+
+    /* Terminal palette */
+    --color-term-bg: #0a0e0a;
+    --color-term-panel: #0d120d;
+    --color-term-border: #1a2a1a;
+    --color-term-border-bright: #2a4a2a;
+    --color-term-text: #c8e6c8;
+    --color-term-text-dim: #6b8f6b;
+    --color-term-prompt: #00ff41;
+    --color-term-accent: #00ff41;
+    --color-term-amber: #ffb000;
+    --color-term-warning: #ffb000;
+    --color-term-danger: #ff5555;
+    --color-term-success: #00ff41;
+    --color-term-cyan: #00d4ff;
+    --color-term-muted: #4a6b4a;
+
+    --shadow-term-glow: 0 0 20px -4px rgba(0, 255, 65, 0.25);
+    --shadow-term-inner: inset 0 0 0 1px rgba(0, 255, 65, 0.08);
+
+    --background-image-grid-pattern: linear-gradient(rgba(0, 255, 65, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 255, 65, 0.03) 1px, transparent 1px);
+    --background-image-landing-gradient: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(0, 255, 65, 0.12), transparent),
+        radial-gradient(ellipse 60% 40% at 100% 50%, rgba(0, 212, 255, 0.06), transparent),
+        radial-gradient(ellipse 60% 40% at 0% 80%, rgba(255, 176, 0, 0.05), transparent);
+
+    --background-size-grid: 24px 24px;
+
+    --animate-fade-in: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@layer components {
+    .btn {
+        @apply inline-flex items-center justify-center rounded border font-medium transition-all focus:outline-none focus:ring-2 focus:ring-offset-0 disabled:opacity-50;
+        @apply border-term-border bg-term-panel text-term-text hover:border-term-accent hover:text-term-accent focus:ring-term-accent/50;
+    }
+    .btn-primary {
+        @apply inline-flex items-center justify-center rounded border border-term-accent/60 bg-term-accent/10 font-medium text-term-accent transition-all hover:bg-term-accent/20 focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-term-accent/50 disabled:opacity-50;
+    }
+    .btn-secondary {
+        @apply inline-flex items-center justify-center rounded border border-term-border bg-term-panel font-medium text-term-text-dim transition-all hover:border-term-border-bright hover:text-term-text focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-term-accent/50 disabled:opacity-50;
+    }
+    .btn-ghost {
+        @apply inline-flex items-center justify-center rounded border border-transparent bg-transparent font-medium text-term-text-dim transition-all hover:border-term-border hover:bg-term-panel hover:text-term-text focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-term-accent/50 disabled:opacity-50;
+    }
+
+    .input {
+        @apply w-full rounded border border-term-border bg-term-bg px-3 py-2 font-mono text-term-text placeholder-term-muted;
+        @apply focus:border-term-accent focus:outline-none focus:ring-1 focus:ring-term-accent;
+    }
+
+    .card {
+        @apply rounded border border-term-border bg-term-panel shadow-term-inner;
+    }
+    .card-header {
+        @apply border-b border-term-border bg-term-panel/80 px-4 py-3 font-mono text-term-text-dim;
+    }
+
+    .table-container {
+        @apply overflow-x-auto border border-term-border bg-term-bg;
+    }
+    .data-table {
+        @apply w-full min-w-max text-left text-sm font-mono;
+    }
+    .data-table th {
+        @apply border-b border-term-border bg-term-panel px-4 py-2.5 font-medium uppercase tracking-wider text-term-amber;
+    }
+    .data-table td {
+        @apply border-b border-term-border/80 px-4 py-2 text-term-text-dim;
+    }
+    .data-table tr:hover td {
+        @apply bg-term-accent/5 text-term-text;
+    }
+
+    .badge {
+        @apply inline-flex items-center rounded border border-term-border px-2 py-0.5 text-xs font-mono;
+    }
+    .badge-schema {
+        @apply inline-flex items-center rounded border border-term-accent/40 bg-term-accent/10 px-2 py-0.5 text-xs font-mono text-term-accent;
+    }
+    .badge-type {
+        @apply inline-flex items-center rounded border border-term-amber/40 bg-term-amber/10 px-2 py-0.5 text-xs font-mono text-term-amber;
+    }
+}
+
+.bg-grid-pattern {
+    background-image: var(--background-image-grid-pattern);
+}
+.bg-grid {
+    background-size: var(--background-size-grid);
+}
+.bg-landing-gradient {
+    background-image: var(--background-image-landing-gradient);
+}

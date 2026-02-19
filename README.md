@@ -1,89 +1,69 @@
-# PG Admin — PostgreSQL 18+ Admin Dashboard
+# PG Admin — Laravel
 
-A standalone, phpMyAdmin-style admin dashboard for **PostgreSQL 18+** with a modern Tailwind UI. Login with **host**, **user**, and **password**; switch between multiple databases; browse tables with pagination; view structure; run SQL.
-
-Optimized for **performance** (pagination, connection pooling per request) and ready to deploy on **Laravel Forge** (Node.js site, not a Laravel app).
-
-## Features
-
-- **Login**: Host, port, user, password, optional SSL
-- **Database switcher**: Select or switch database when multiple are available
-- **Tables list**: All tables in the current database with schema badges
-- **Browse table**: Paginated rows (configurable page size, max 500)
-- **Table structure**: Column names, types, nullability, defaults
-- **SQL runner**: Execute any PostgreSQL (SELECT/INSERT/UPDATE/DELETE); SELECT results limited to 500 rows
-- **Session-based auth**: Credentials stored server-side; CSRF protection
+PostgreSQL 18+ admin dashboard (phpMyAdmin-style) built with **Laravel**. Login with host/user/password; database switcher; tables list; browse table (paginated); table structure; SQL runner. Session-based auth and CSRF via Laravel.
 
 ## Requirements
 
-- Node.js 18+
-- PostgreSQL 18+ (or compatible; tested with 18+)
+- PHP 8.2+
+- Composer
+- PostgreSQL 18+ (or compatible) — the **target** DB you want to manage (not required for the app’s own data)
+- Node 18+ (for building frontend assets)
+
+The app uses SQLite by default for its own data (sessions, cache, jobs). You can keep that or switch to MySQL/PostgreSQL in `.env`.
 
 ## Quick start
 
 ```bash
 cp .env.example .env
-# Edit .env: set PORT, SESSION_SECRET
+php artisan key:generate
+
+# Optional: use file sessions so you don’t need to run migrations
+# In .env set: SESSION_DRIVER=file
+
+# If using SESSION_DRIVER=database (default), run migrations
+php artisan migrate
 
 npm install
-npm run build:css
-npm start
+npm run build
+
+php artisan serve
 ```
 
-Open `http://localhost:3000`, log in with your PostgreSQL host, user, and password, then pick a database from the dropdown.
+Open `http://localhost:8000`, then log in with your PostgreSQL host, user, and password.
 
-## Deploy on Laravel Forge
+## Environment
 
-1. **Create a Node.js site** (not a Laravel app):
-   - In Forge: create a new site and set the web directory to your app root (e.g. `pgdbadmin` or the repo path).
-   - Enable **Node.js** for this site and set **Node version** to 18+.
+- `APP_KEY` — required; set with `php artisan key:generate`.
+- `SESSION_DRIVER` — `file` or `database`. If `database`, run `php artisan migrate`.
+- `APP_URL` — used for links; set in production.
 
-2. **Deploy the app** (e.g. clone repo or upload files):
-   - In the app directory run:
-     - `npm install --production`
-     - `npm run build:css`
-   - Set **Start Command** (in Forge’s Daemons or Process Manager / ecosystem) to:
-     - `node server.js`
-     - Or: `npm start` (if your `package.json` has `"start": "node server.js"`).
+No PostgreSQL env vars are needed for the app itself; users provide connection details at login.
 
-3. **Environment**:
-   - In Forge’s **Environment** (or `.env` on the server), set:
-     - `PORT` to the port your Node app listens on (e.g. `3000` if you’re proxying to it).
-     - `NODE_ENV=production`
-     - `SESSION_SECRET` to a long random string.
+## Deploy (e.g. Laravel Forge)
 
-4. **Nginx proxy** (if the site is behind Nginx):
-   - Add a **Proxy Pass** (or location block) to forward to `http://127.0.0.1:PORT` (e.g. `http://127.0.0.1:3000`).
-   - Or use Forge’s “Websites” → your site → “Proxy” to point to the Node app port.
+1. Create a **Laravel** site (PHP), not a Node site.
+2. Point the web root to the project’s `public` directory.
+3. After deploy:
+   - `composer install --no-dev`
+   - `php artisan key:generate` (or set `APP_KEY` in env)
+   - `php artisan migrate --force` (if using database sessions/cache)
+   - `npm ci && npm run build`
+4. Set `APP_ENV=production`, `APP_DEBUG=false`, and a proper `APP_URL`.
+5. Use HTTPS and restrict access (e.g. IP allowlist).
 
-5. **Process manager** (recommended):
-   - Use a Daemon or PM2 so the Node process restarts on failure:
-     - Command: `node server.js` (or `npm start`), working directory = app root.
-   - Or in Forge use “Daemons” with the same command and directory.
+## Routes
 
-6. **Security**:
-   - Use HTTPS (Forge can provision SSL).
-   - Restrict access (e.g. IP allowlist or Forge’s “Restrict by IP”) so only admins can reach the dashboard.
-
-## Environment variables
-
-| Variable         | Description                          | Default        |
-|------------------|--------------------------------------|----------------|
-| `PORT`           | Server port                          | `3000`         |
-| `NODE_ENV`       | `development` / `production`         | `development`  |
-| `SESSION_SECRET` | Secret for session signing (required in prod) | (dev fallback) |
-| `PG_DEFAULT_PORT`| Not used by app; doc only            | `5432`         |
-
-## Development
-
-```bash
-npm install
-npm run build:css   # Build Tailwind once
-npm start           # Run server
-```
-
-After changing Tailwind or `public/css/input.css`, run `npm run build:css` again. For live CSS rebuilds you can use `npx tailwindcss -i ./public/css/input.css -o ./public/css/output.css --watch` in a separate terminal.
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/` | Landing (no auth) or dashboard (tables) |
+| GET/POST | `/login` | Login form / submit |
+| POST | `/logout` | Logout |
+| GET | `/docs/connecting` | Connecting guide (NL) |
+| POST | `/switch-db` | Change current database (auth) |
+| GET | `/table/{schema}/{table}` | Browse table rows (auth) |
+| GET | `/table/{schema}/{table}/structure` | Table structure (auth) |
+| GET/POST | `/query` | SQL console (auth) |
 
 ## License
 
-MIT
+MIT.
