@@ -7,8 +7,11 @@
         <h1 class="font-mono text-2xl font-semibold text-term-text">query</h1>
         <p class="mt-1 font-mono text-sm text-term-text-dim">SELECT, INSERT, UPDATE, DELETE — results limited to 500 rows.</p>
     </div>
-    <form action="{{ route('query.execute') }}" method="post" class="card overflow-hidden">
+    <form action="{{ route('query.execute') }}" method="post" class="card overflow-hidden" id="query-form">
         @csrf
+        <input type="hidden" name="sort" id="query-sort" value="{{ $sort ?? '' }}" />
+        <input type="hidden" name="dir" id="query-dir" value="{{ $dir ?? 'ASC' }}" />
+        <input type="hidden" name="offset" id="query-offset" value="{{ $result['offset'] ?? 0 }}" />
         <div class="border-b border-term-border p-4">
             <textarea name="sql" id="sql" rows="10" class="input font-mono text-sm" placeholder="SELECT * FROM my_table LIMIT 10;">{{ $sql ?? '' }}</textarea>
         </div>
@@ -37,11 +40,19 @@
             ])
         </div>
         <div class="table-container max-h-[60vh] overflow-auto">
-            <table class="data-table">
+            <table class="data-table" data-sort="{{ $sort ?? '' }}" data-dir="{{ $dir ?? 'ASC' }}">
                 <thead>
                     <tr>
                         @foreach($result['fields'] ?? [] as $f)
-                        <th class="whitespace-nowrap">{{ $f->name }}</th>
+                        @php $isSortCol = isset($sort) && $sort === $f->name; @endphp
+                        <th class="whitespace-nowrap">
+                            <button type="button" class="query-sort-header inline-flex items-center gap-1 hover:text-term-accent focus:outline-none focus:ring-2 focus:ring-term-accent/50 rounded font-inherit {{ $isSortCol ? 'text-term-accent' : 'text-term-amber' }}" data-column="{{ $f->name }}">
+                                {{ $f->name }}
+                                @if($isSortCol)
+                                <span class="text-term-text-dim" aria-hidden="true">{{ ($dir ?? 'ASC') === 'DESC' ? '↓' : '↑' }}</span>
+                                @endif
+                            </button>
+                        </th>
                         @endforeach
                     </tr>
                 </thead>
@@ -71,6 +82,29 @@
     <div class="mt-4 rounded border border-term-success/50 bg-term-success/10 px-4 py-3 font-mono text-sm text-term-success">
         {{ $message }}
     </div>
+    @endif
+
+    @if(isset($result) && $result && !empty($result['fields'] ?? []))
+    <script>
+    (function() {
+        var form = document.getElementById('query-form');
+        var sortInput = document.getElementById('query-sort');
+        var dirInput = document.getElementById('query-dir');
+        var table = document.querySelector('.data-table[data-sort]');
+        if (!form || !sortInput || !dirInput || !table) return;
+        var currentSort = table.dataset.sort || '';
+        var currentDir = (table.dataset.dir || 'ASC').toUpperCase();
+        table.querySelectorAll('.query-sort-header').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var col = this.dataset.column;
+                var nextDir = (currentSort === col && currentDir === 'DESC') ? 'ASC' : 'DESC';
+                sortInput.value = col;
+                dirInput.value = nextDir;
+                form.submit();
+            });
+        });
+    })();
+    </script>
     @endif
 </div>
 @endsection

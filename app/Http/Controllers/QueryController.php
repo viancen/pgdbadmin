@@ -45,6 +45,8 @@ class QueryController extends Controller
 
         $limit = min((int) ($request->input('limit') ?: 500), self::MAX_PAGE_SIZE);
         $offset = max(0, (int) ($request->input('offset') ?: 0));
+        $sort = $request->input('sort') ? trim($request->input('sort')) : null;
+        $dir = strtoupper((string) $request->input('dir')) === 'DESC' ? 'DESC' : 'ASC';
 
         $viewData = [
             'title' => 'SQL Query',
@@ -53,10 +55,12 @@ class QueryController extends Controller
             'databases' => $request->session()->get('pg_databases', []),
             'user' => $credentials['user'],
             'host' => $credentials['host'],
+            'sort' => $sort,
+            'dir' => $dir,
         ];
 
         try {
-            $result = $this->pg->executeQuery($pdo, $sql, $limit, $offset);
+            $result = $this->pg->executeQuery($pdo, $sql, $limit, $offset, $sort, $dir);
             if (isset($result['message'])) {
                 $viewData['message'] = $result['message'];
             } else {

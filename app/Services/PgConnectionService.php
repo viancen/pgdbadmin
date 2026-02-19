@@ -81,18 +81,108 @@ class PgConnectionService
     /**
      * Select rows from a table with pagination.
      *
+     * @param  string|null  $orderBy  column name to order by (quoted); null = no order
+     * @param  string  $orderDir  ASC or DESC
      * @return array{rows: array, fields: array, total: int}
      */
-    public function selectTableRows(PDO $pdo, string $schema, string $table, int $limit = 100, int $offset = 0): array
+    public function selectTableRows(PDO $pdo, string $schema, string $table, int $limit = 100, int $offset = 0, ?string $orderBy = null, string $orderDir = 'ASC'): array
     {
         $quoted = $this->quoteIdent($schema) . '.' . $this->quoteIdent($table);
-        $dataStmt = $pdo->prepare("SELECT * FROM {$quoted} LIMIT ? OFFSET ?");
+        $orderDir = strtoupper($orderDir) === 'DESC' ? 'DESC' : 'ASC';
+        $orderClause = $orderBy !== null && $orderBy !== '' ? ' ORDER BY ' . $this->quoteIdent($orderBy) . ' ' . $orderDir : '';
+        $dataStmt = $pdo->prepare("SELECT * FROM {$quoted}{$orderClause} LIMIT ? OFFSET ?");
         $dataStmt->execute([$limit, $offset]);
         $rows = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
         $countStmt = $pdo->query("SELECT COUNT(*) AS count FROM {$quoted}");
         $total = (int) $countStmt->fetch(PDO::FETCH_ASSOC)['count'];
         $fields = $rows ? array_map(fn ($key) => (object) ['name' => $key], array_keys($rows[0])) : [];
         return ['rows' => $rows, 'fields' => $fields, 'total' => $total];
+    }
+
+    /**
+     * Get primary key column names for a table.
+     *
+     * @return array<int, string>
+     */
+    public function getPrimaryKeyColumns(PDO $pdo, string $schema, string $table): array
+    {
+        $stmt = $pdo->prepare("
+            SELECT a.attname AS name
+            FROM pg_catalog.pg_attribute a
+            JOIN pg_catalog.pg_index i ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey) AND a.attnum > 0
+            WHERE i.indrelid = (?::text || '.' || ?::text)::regclass
+              AND i.indisprimary
+              AND NOT a.attisdropped
+            ORDER BY array_position(i.indkey, a.attnum)
+        ");
+        $stmt->execute([$schema, $table]);
+        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    }
+
+    /**
+     * Execute a SELECT with pagination: get total count and paged rows.
+     * Injects ORDER BY (optional), LIMIT/OFFSET into the SQL.
+     *
+     * @param  string|null  $orderBy  column name to order by (quoted)
+     * @param  string  $orderDir  ASC or DESC
+     * @return array{rows: array, fields: array, total: int}
+     */
+    public function executeSelectWithPagination(PDO $pdo, string $sql, int $limit = 100, int $offset = 0, ?string $orderBy = null, string $orderDir = 'ASC'): array
+    {
+        $sql = trim(rtrim($sql, ';'));
+        $sqlForCount = preg_replace('/\s*OFFSET\s+\d+/i', '', $sql);
+        $sqlForCount = preg_replace('/\s*LIMIT\s+\d+/i', '', $sqlForCount);
+        $countSql = "SELECT COUNT(*) AS count FROM ({$sqlForCount}) AS _cnt";
+        $countStmt = $pdo->query($countSql);
+        $total = (int) $countStmt->fetch(PDO::FETCH_ASSOC)['count'];
+
+        $orderDir = strtoupper($orderDir) === 'DESC' ? 'DESC' : 'ASC';
+        $orderClause = ($orderBy !== null && $orderBy !== '') ? ' ORDER BY ' . $this->quoteIdent($orderBy) . ' ' . $orderDir : '';
+
+        $dataSql = preg_replace('/\s*OFFSET\s+\d+/i', '', $sql);
+        $dataSql = preg_replace('/\s*LIMIT\s+\d+/i', '', $dataSql);
+        // Remove existing ORDER BY so we can inject our sort (user sort takes precedence)
+        $dataSql = preg_replace('/\s*ORDER BY\s+.+?(?=\s*LIMIT\s|\s*$)/is', '', $dataSql);
+        $dataSql = rtrim(rtrim($dataSql), ';');
+        $dataSql .= "{$orderClause} LIMIT {$limit} OFFSET {$offset}";
+        $stmt = $pdo->query($dataSql);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $fields = $rows ? array_map(fn ($key) => (object) ['name' => $key], array_keys($rows[0])) : [];
+        if (empty($rows) && $stmt->columnCount() > 0) {
+            for ($i = 0; $i < $stmt->columnCount(); $i++) {
+                $meta = $stmt->getColumnMeta($i);
+                $fields[] = (object) ['name' => $meta['name'] ?? "column_{$i}"];
+            }
+        }
+        return ['rows' => $rows, 'fields' => $fields, 'total' => $total];
+    }
+
+    /**
+     * Update a single row by primary key.
+     *
+     * @param  array<string, mixed>  $pkValues  primary key column => value
+     * @param  array<string, mixed>  $updates   column => new value (only non-PK columns)
+     */
+    public function updateRow(PDO $pdo, string $schema, string $table, array $pkValues, array $updates): void
+    {
+        $quoted = $this->quoteIdent($schema) . '.' . $this->quoteIdent($table);
+        $setParts = [];
+        $params = [];
+        $n = 0;
+        foreach ($updates as $col => $value) {
+            $n++;
+            $setParts[] = $this->quoteIdent($col) . " = ?";
+            $params[] = $value === '' || (is_string($value) && strtoupper(trim($value)) === 'NULL') ? null : $value;
+        }
+        $whereParts = [];
+        foreach ($pkValues as $col => $value) {
+            $n++;
+            $whereParts[] = $this->quoteIdent($col) . " = ?";
+            $params[] = $value;
+        }
+        $sql = "UPDATE {$quoted} SET " . implode(', ', $setParts) . " WHERE " . implode(' AND ', $whereParts);
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
     }
 
     /**
@@ -126,14 +216,24 @@ class PgConnectionService
     /**
      * Execute raw SQL and return result for SELECT, or row count for other statements.
      *
+     * @param  string|null  $orderBy  column name to order by (for SELECT only)
+     * @param  string  $orderDir  ASC or DESC
      * @return array{rows?: array, fields?: array, rowCount?: int, total?: int, limit?: int, offset?: int}|array{message: string}
      */
-    public function executeQuery(PDO $pdo, string $sql, int $limit = 500, int $offset = 0): array
+    public function executeQuery(PDO $pdo, string $sql, int $limit = 500, int $offset = 0, ?string $orderBy = null, string $orderDir = 'ASC'): array
     {
         $isSelect = preg_match('/^\s*SELECT\s+/i', $sql) === 1;
         if ($isSelect) {
-            $hasLimit = (bool) preg_match('/\bLIMIT\s+\d+/i', $sql);
-            $sql = $hasLimit ? $sql : rtrim(rtrim($sql, ';')) . " LIMIT {$limit} OFFSET {$offset}";
+            $orderDir = strtoupper($orderDir) === 'DESC' ? 'DESC' : 'ASC';
+            $orderClause = ($orderBy !== null && $orderBy !== '') ? ' ORDER BY ' . $this->quoteIdent($orderBy) . ' ' . $orderDir : '';
+
+            $sql = trim(rtrim($sql, ';'));
+            $sql = preg_replace('/\s*OFFSET\s+\d+/i', '', $sql);
+            $sql = preg_replace('/\s*LIMIT\s+\d+/i', '', $sql);
+            $sql = preg_replace('/\s*ORDER BY\s+.+?(?=\s*LIMIT\s|\s*$)/is', '', $sql);
+            $sql = rtrim($sql, '; ');
+            $sql .= $orderClause . " LIMIT {$limit} OFFSET {$offset}";
+
             $stmt = $pdo->query($sql);
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
             $fields = [];
