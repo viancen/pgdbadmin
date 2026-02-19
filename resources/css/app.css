@@ -55,29 +55,32 @@
 
 @layer components {
     .btn {
-        @apply inline-flex items-center justify-center rounded border font-medium transition-all focus:outline-none focus:ring-2 focus:ring-offset-0 disabled:opacity-50;
-        @apply border-term-border bg-term-panel text-term-text hover:border-term-accent hover:text-term-accent focus:ring-term-accent/50;
+        @apply inline-flex items-center justify-center gap-1.5 rounded-lg border font-medium transition-all focus:outline-none focus:ring-2 focus:ring-offset-0 disabled:opacity-50;
+        @apply px-4 py-2.5 border-term-border bg-term-panel text-term-text hover:border-term-accent hover:text-term-accent focus:ring-term-accent/50;
     }
     .btn-primary {
-        @apply inline-flex items-center justify-center rounded border border-term-accent/60 bg-term-accent/10 font-medium text-term-accent transition-all hover:bg-term-accent/20 focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-term-accent/50 disabled:opacity-50;
+        @apply inline-flex items-center justify-center gap-1.5 rounded-lg border border-term-accent/60 bg-term-accent/10 font-medium text-term-accent transition-all hover:bg-term-accent/20 focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-term-accent/50 disabled:opacity-50;
+        @apply px-4 py-2.5;
     }
     .btn-secondary {
-        @apply inline-flex items-center justify-center rounded border border-term-border bg-term-panel font-medium text-term-text-dim transition-all hover:border-term-border-bright hover:text-term-text focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-term-accent/50 disabled:opacity-50;
+        @apply inline-flex items-center justify-center gap-1.5 rounded-lg border border-term-border bg-term-panel font-medium text-term-text-dim transition-all hover:border-term-border-bright hover:text-term-text focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-term-accent/50 disabled:opacity-50;
+        @apply px-4 py-2.5;
     }
     .btn-ghost {
-        @apply inline-flex items-center justify-center rounded border border-transparent bg-transparent font-medium text-term-text-dim transition-all hover:border-term-border hover:bg-term-panel hover:text-term-text focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-term-accent/50 disabled:opacity-50;
+        @apply inline-flex items-center justify-center gap-1.5 rounded-lg border border-transparent bg-transparent font-medium text-term-text-dim transition-all hover:border-term-border hover:bg-term-panel hover:text-term-text focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-term-accent/50 disabled:opacity-50;
+        @apply px-3 py-2;
     }
 
     .input {
-        @apply w-full rounded border border-term-border bg-term-bg px-3 py-2 font-mono text-term-text placeholder-term-muted;
+        @apply w-full rounded-lg border border-term-border bg-term-bg px-3 py-2.5 font-mono text-term-text placeholder-term-muted;
         @apply focus:border-term-accent focus:outline-none focus:ring-1 focus:ring-term-accent;
     }
 
     .card {
-        @apply rounded border border-term-border bg-term-panel shadow-term-inner;
+        @apply rounded-lg border border-term-border bg-term-panel shadow-term-inner;
     }
     .card-header {
-        @apply border-b border-term-border bg-term-panel/80 px-4 py-3 font-mono text-term-text-dim;
+        @apply border-b border-term-border bg-term-panel/80 px-5 py-4 font-mono text-term-text-dim;
     }
 
     .table-container {

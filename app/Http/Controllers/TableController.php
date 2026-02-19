@@ -267,4 +267,48 @@ class TableController extends Controller
             return response()->json(['error' => $e->getMessage()], 422);
         }
     }
+
+    /**
+     * Delete a single row by primary key (JSON: { pk: {} }).
+     */
+    public function deleteRow(Request $request, string $schema, string $table): JsonResponse
+    {
+        $credentials = $request->session()->get('pg_credentials');
+        $currentDb = $request->session()->get('pg_current_db');
+        $pdo = $this->pg->getConnection($credentials, $currentDb);
+
+        if (! $pdo) {
+            return response()->json(['error' => 'Not authenticated'], 401);
+        }
+
+        $pk = $request->input('pk', []);
+        if (! is_array($pk)) {
+            return response()->json(['error' => 'Invalid payload: pk must be an object.'], 422);
+        }
+
+        try {
+            $primaryKey = $this->pg->getPrimaryKeyColumns($pdo, $schema, $table);
+        } catch (\Throwable $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+
+        if (empty($primaryKey)) {
+            return response()->json(['error' => 'Table has no primary key; row delete is not supported.'], 422);
+        }
+
+        $pkValues = [];
+        foreach ($primaryKey as $col) {
+            if (! array_key_exists($col, $pk)) {
+                return response()->json(['error' => "Primary key column \"{$col}\" is required."], 422);
+            }
+            $pkValues[$col] = $pk[$col];
+        }
+
+        try {
+            $this->pg->deleteRow($pdo, $schema, $table, $pkValues);
+            return response()->json(['success' => true]);
+        } catch (\Throwable $e) {
+            return response()->json(['error' => $e->getMessage()], 422);
+        }
+    }
 }

@@ -1,5 +1,5 @@
 <nav class="fixed top-0 left-0 right-0 z-50 border-b border-term-border bg-term-panel/95 backdrop-blur">
-    <div class="mx-auto flex h-12 max-w-7xl items-center justify-between px-4 font-mono text-sm">
+    <div class="mx-auto flex h-14 max-w-7xl items-center justify-between px-5 font-mono text-sm">
         <a href="{{ route('home') }}" class="font-mono font-medium text-term-text hover:text-term-accent">
             <span class="text-term-accent">pg</span>dbadmin
         </a>

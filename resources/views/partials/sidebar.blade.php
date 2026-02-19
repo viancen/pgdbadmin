@@ -1,19 +1,19 @@
 {{-- DataGrip-style left sidebar: Database Explorer --}}
 <aside class="app-sidebar flex h-screen w-[260px] shrink-0 flex-col border-r border-term-border bg-term-panel">
-    <div class="border-b border-term-border px-3 py-3">
+    <div class="border-b border-term-border px-4 py-4">
         <a href="{{ route('home') }}" class="font-mono text-sm font-medium text-term-text hover:text-term-accent inline-flex items-center gap-2">
             <img src="{{ asset('pgdb.png') }}" alt="pgdbadmin" class="h-6 w-6 shrink-0 object-contain" />
             <span class="text-term-accent">pg</span>dbadmin
         </a>
     </div>
     <div class="flex-1 overflow-y-auto">
-        <div class="border-b border-term-border px-3 py-2">
+        <div class="border-b border-term-border px-4 py-3">
             <p class="font-mono text-[11px] uppercase tracking-wider text-term-text-dim inline-flex items-center gap-1.5"><i data-lucide="layout-grid" class="w-3.5 h-3.5"></i> Database Explorer</p>
             <p class="mt-1 truncate font-mono text-xs text-term-muted" title="{{ $sidebarUser ?? '' }}@{{ $sidebarHost ?? '' }}">
                 {{ $sidebarUser ?? '' }}@{{ $sidebarHost ?? '' }}
             </p>
         </div>
-        <div class="border-b border-term-border px-3 py-2">
+        <div class="border-b border-term-border px-4 py-3">
             <span class="font-mono text-[11px] text-term-text-dim">database</span>
             <form action="{{ route('switch-db') }}" method="post" class="mt-1">
                 @csrf

@@ -186,6 +186,25 @@ class PgConnectionService
     }
 
     /**
+     * Delete a single row by primary key.
+     *
+     * @param  array<string, mixed>  $pkValues  primary key column => value
+     */
+    public function deleteRow(PDO $pdo, string $schema, string $table, array $pkValues): void
+    {
+        $quoted = $this->quoteIdent($schema) . '.' . $this->quoteIdent($table);
+        $whereParts = [];
+        $params = [];
+        foreach ($pkValues as $col => $value) {
+            $whereParts[] = $this->quoteIdent($col) . ' = ?';
+            $params[] = $value;
+        }
+        $sql = 'DELETE FROM ' . $quoted . ' WHERE ' . implode(' AND ', $whereParts);
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+    }
+
+    /**
      * Get table columns (structure).
      *
      * @return array<int, object{name: string, type: string, notnull: bool, default: ?string}>
@@ -239,6 +258,39 @@ class PgConnectionService
         ");
         $stmt->execute([$schema, $table]);
         return $stmt->fetchAll(PDO::FETCH_OBJ);
+    }
+
+    /**
+     * List schema names (user-visible schemas).
+     *
+     * @return array<int, string>
+     */
+    public function listSchemas(PDO $pdo): array
+    {
+        $stmt = $pdo->query("
+            SELECT schema_name
+            FROM information_schema.schemata
+            WHERE schema_name NOT IN ('pg_catalog', 'information_schema')
+            ORDER BY schema_name
+        ");
+        return $stmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
+    }
+
+    /**
+     * Create or replace a view. SQL must be a SELECT (single statement).
+     *
+     * @throws \InvalidArgumentException if SQL does not look like a SELECT
+     */
+    public function createView(PDO $pdo, string $schema, string $viewName, string $sql): void
+    {
+        $sql = trim(rtrim(trim($sql), ';'));
+        if (preg_match('/^\s*SELECT\s+/i', $sql) !== 1) {
+            throw new \InvalidArgumentException('Only SELECT queries can be saved as a view.');
+        }
+        $quotedSchema = $this->quoteIdent($schema);
+        $quotedName = $this->quoteIdent($viewName);
+        $ddl = "CREATE OR REPLACE VIEW {$quotedSchema}.{$quotedName} AS " . $sql;
+        $pdo->exec($ddl);
     }
 
     /**

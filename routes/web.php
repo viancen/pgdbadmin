@@ -19,6 +19,8 @@ Route::middleware('pg.auth')->group(function () {
     Route::get('/table/{schema}/{table}/structure', [TableController::class, 'structure'])->name('table.structure');
     Route::post('/table/{schema}/{table}/column', [TableController::class, 'columnDdl'])->name('table.column.ddl');
     Route::post('/table/{schema}/{table}/row', [TableController::class, 'updateRow'])->name('table.row.update');
+    Route::post('/table/{schema}/{table}/row/delete', [TableController::class, 'deleteRow'])->name('table.row.delete');
     Route::get('/query', [QueryController::class, 'index'])->name('query.index');
     Route::post('/query', [QueryController::class, 'execute'])->name('query.execute');
+    Route::post('/query/create-view', [QueryController::class, 'createView'])->name('query.create-view');
 });

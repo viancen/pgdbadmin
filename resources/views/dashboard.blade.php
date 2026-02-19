@@ -2,7 +2,7 @@
 
 @section('content')
 <div class="p-6">
-    <div class="mb-6 flex items-center justify-between border-b border-term-border pb-4">
+    <div class="mb-6 flex items-center justify-between border-b border-term-border pb-5">
         <div>
             <h1 class="font-mono text-lg font-semibold text-term-text inline-flex items-center gap-2">
                 <img src="{{ asset('pgdb.png') }}" alt="" class="h-5 w-5 shrink-0 object-contain" aria-hidden="true" />
@@ -16,7 +16,7 @@
             <p class="mt-0.5 text-xs text-term-text-dim">Click a table to browse data or view structure</p>
         </div>
         @if(isset($error) && $error)
-        <div class="border-b border-term-border bg-term-danger/10 px-6 py-3 font-mono text-sm text-term-danger">{{ $error }}</div>
+        <div class="border-b border-term-border bg-term-danger/10 px-6 py-4 font-mono text-sm text-term-danger">{{ $error }}</div>
         @endif
         <div class="table-container">
             <table class="data-table">

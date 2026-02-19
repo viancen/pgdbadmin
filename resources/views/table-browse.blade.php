@@ -31,13 +31,13 @@
 
     {{-- Query box: run custom SQL on this table with pagination --}}
     <form action="{{ route('table.browse', ['schema' => $schema, 'table' => $tableName]) }}" method="get" class="card overflow-hidden mb-4">
-        <div class="border-b border-term-border p-3">
-            <label for="table-query-sql" class="font-mono text-xs text-term-text-dim block mb-1">Query (results paginated below)</label>
+        <div class="border-b border-term-border p-5">
+            <label for="table-query-sql" class="font-mono text-xs text-term-text-dim block mb-2">Query (results paginated below)</label>
             <textarea name="sql" id="table-query-sql" rows="3" class="input font-mono text-sm" placeholder="{{ $defaultSql }}">{{ old('sql', $sql ?? $defaultSql) }}</textarea>
         </div>
-        <div class="flex items-center justify-between border-term-border bg-term-panel/80 px-4 py-2 font-mono text-sm">
+        <div class="flex items-center justify-between border-term-border bg-term-panel/80 px-5 py-4 font-mono text-sm gap-4">
             <span class="text-term-text-dim text-xs">Default: SELECT * FROM table LIMIT 100 — change and run to filter/sort.</span>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-3">
                 <input type="hidden" name="limit" value="{{ $limit }}" />
                 <button type="submit" class="btn-primary font-mono text-sm inline-flex items-center gap-1.5"><i data-lucide="play" class="w-4 h-4 shrink-0"></i> Run query</button>
             </div>
@@ -55,6 +55,7 @@
                 data-table="{{ $tableName }}"
                 data-browse-base-url="{{ route('table.browse', ['schema' => $schema, 'table' => $tableName]) }}"
                 data-update-url="{{ route('table.row.update', ['schema' => $schema, 'table' => $tableName]) }}"
+                data-delete-url="{{ route('table.row.delete', ['schema' => $schema, 'table' => $tableName]) }}"
                 data-can-edit="{{ $canEditRows ? '1' : '0' }}"
                 data-csrf="{{ csrf_token() }}"
                 data-column-meta="{{ json_encode($columnMeta) }}"
@@ -103,7 +104,7 @@
                                     $linkSql = 'SELECT * FROM "' . $schema . '"."' . $linkedTable . '" WHERE "id" = ' . $sqlVal . ' LIMIT 100';
                                     $linkUrl = route('table.browse', ['schema' => $schema, 'table' => $linkedTable]) . '?sql=' . rawurlencode($linkSql);
                                 @endphp
-                                <a href="{{ $linkUrl }}" class="shrink-0 inline-flex items-center text-term-accent hover:text-term-amber focus:outline-none focus:ring-2 focus:ring-term-accent/50 rounded" title="View linked record in {{ $linkedTable }}"><i data-lucide="link" class="w-3.5 h-3.5"></i></a>
+                                <a href="{{ $linkUrl }}" target="_blank" rel="noopener noreferrer" class="shrink-0 inline-flex items-center text-term-accent hover:text-term-amber focus:outline-none focus:ring-2 focus:ring-term-accent/50 rounded" title="View linked record in {{ $linkedTable }} (new tab)"><i data-lucide="link" class="w-3.5 h-3.5"></i></a>
                                 @endif
                             </span>
                             @endif
@@ -119,6 +120,20 @@
         @endif
     </div>
 </div>
+
+@if($canEditRows)
+{{-- Context menu: right-click row → Verwijder record --}}
+<div id="table-browse-context-menu" class="fixed z-40 hidden min-w-[10rem] rounded-lg border border-term-border bg-term-panel shadow-xl py-1 font-mono text-sm">
+    <button type="button" class="table-context-delete w-full text-left px-4 py-2 text-term-danger hover:bg-term-danger/10 focus:outline-none focus:ring-0 flex items-center gap-2" data-action="delete"><i data-lucide="trash-2" class="w-4 h-4 shrink-0"></i> Verwijder record</button>
+</div>
+@include('partials.modal', [
+    'id' => 'row-delete-confirm-modal',
+    'title' => 'Verwijder record',
+    'body' => '<p>Weet je het zeker? Dit kan niet ongedaan worden gemaakt.</p>',
+    'confirmLabel' => 'Verwijderen',
+    'cancelLabel' => 'Annuleren',
+])
+@endif
 
 <script>
 (function() {
@@ -182,19 +197,109 @@
 </script>
 
 @if($canEditRows)
+{{-- Context menu + delete confirm script --}}
+<script>
+(function() {
+    var table = document.getElementById('table-browse-data');
+    if (!table || table.dataset.canEdit !== '1') return;
+    var deleteUrl = table.dataset.deleteUrl;
+    var csrf = table.dataset.csrf;
+    var columnMeta = JSON.parse(table.dataset.columnMeta || '{}');
+    var menu = document.getElementById('table-browse-context-menu');
+    var deleteModal = document.getElementById('row-delete-confirm-modal');
+    var rowToDelete = null;
+
+    function getPkFromRow(row) {
+        var pk = {};
+        Object.keys(columnMeta).forEach(function(col) {
+            if (columnMeta[col] && columnMeta[col].is_pk) pk[col] = row[col];
+        });
+        return pk;
+    }
+
+    table.querySelectorAll('.table-browse-row').forEach(function(tr) {
+        tr.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            if (!tr.dataset.row) return;
+            rowToDelete = tr;
+            if (menu) {
+                menu.style.left = e.clientX + 'px';
+                menu.style.top = e.clientY + 'px';
+                menu.classList.remove('hidden');
+                if (window.refreshLucideIcons) window.refreshLucideIcons();
+            }
+        });
+    });
+
+    function hideContextMenu() {
+        if (menu) menu.classList.add('hidden');
+    }
+
+    document.addEventListener('click', function() { hideContextMenu(); });
+    document.addEventListener('scroll', function() { hideContextMenu(); }, true);
+
+    var pendingDeleteTr = null;
+    if (menu) {
+        menu.querySelector('.table-context-delete').addEventListener('click', function(e) {
+            e.stopPropagation();
+            hideContextMenu();
+            if (!rowToDelete || !deleteModal) return;
+            pendingDeleteTr = rowToDelete;
+            rowToDelete = null;
+            deleteModal.classList.remove('hidden');
+        });
+    }
+    var confirmBtn = deleteModal ? deleteModal.querySelector('.modal-confirm') : null;
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (!pendingDeleteTr) return;
+            var tr = pendingDeleteTr;
+            pendingDeleteTr = null;
+            var row = JSON.parse(tr.dataset.row || '{}');
+            var pk = getPkFromRow(row);
+            confirmBtn.disabled = true;
+            fetch(deleteUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrf,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ pk: pk })
+            })
+            .then(function(r) { return r.json().then(function(j) { return { ok: r.ok, json: j }; }); })
+            .then(function(res) {
+                confirmBtn.disabled = false;
+                deleteModal.classList.add('hidden');
+                if (res.ok && res.json.success) {
+                    tr.remove();
+                } else {
+                    alert(res.json.error || 'Verwijderen mislukt.');
+                }
+            })
+            .catch(function() {
+                confirmBtn.disabled = false;
+                alert('Netwerkfout.');
+            });
+        });
+    }
+})();
+</script>
 {{-- Edit row modal: double-click a row to open --}}
 <div id="row-edit-modal" class="modal-backdrop fixed inset-0 z-50 hidden flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="row-edit-modal-title">
     <div class="modal-overlay absolute inset-0 bg-black/60 backdrop-blur-sm" data-modal-close></div>
     <div class="modal-panel relative z-10 w-full max-w-lg max-h-[90vh] overflow-hidden rounded-lg border border-term-border bg-term-panel shadow-xl flex flex-col">
-        <div class="border-b border-term-border px-5 py-4 shrink-0">
+        <div class="border-b border-term-border px-6 py-5 shrink-0">
             <h2 id="row-edit-modal-title" class="font-mono text-lg font-semibold text-term-text">Edit record</h2>
         </div>
-        <div class="modal-body px-5 py-4 overflow-y-auto font-mono text-sm text-term-text-dim space-y-3" id="row-edit-form-container"></div>
-        <div class="modal-footer flex justify-end gap-2 border-t border-term-border px-5 py-4 shrink-0">
+        <div class="modal-body px-6 py-5 overflow-y-auto font-mono text-sm text-term-text-dim space-y-3" id="row-edit-form-container"></div>
+        <div class="modal-footer flex justify-end gap-3 border-t border-term-border px-6 py-5 shrink-0">
             <button type="button" class="modal-cancel btn-secondary font-mono text-sm inline-flex items-center gap-1.5" data-modal-close><i data-lucide="x" class="w-4 h-4 shrink-0"></i> Cancel</button>
             <button type="button" class="row-edit-save btn-primary font-mono text-sm inline-flex items-center gap-1.5"><i data-lucide="save" class="w-4 h-4 shrink-0"></i> Save</button>
         </div>
-        <div id="row-edit-error" class="hidden px-5 pb-4 text-term-danger text-xs font-mono"></div>
+        <div id="row-edit-error" class="hidden px-6 pb-5 text-term-danger text-xs font-mono"></div>
     </div>
 </div>
 

@@ -12,11 +12,11 @@
         <input type="hidden" name="sort" id="query-sort" value="{{ $sort ?? '' }}" />
         <input type="hidden" name="dir" id="query-dir" value="{{ $dir ?? 'ASC' }}" />
         <input type="hidden" name="offset" id="query-offset" value="{{ $result['offset'] ?? 0 }}" />
-        <div class="border-b border-term-border p-4">
+        <div class="border-b border-term-border p-5">
             <textarea name="sql" id="sql" rows="10" class="input font-mono text-sm" placeholder="SELECT * FROM my_table LIMIT 10;" title="Cmd+Enter to execute">{{ $sql ?? '' }}</textarea>
-            <p class="mt-1 font-mono text-[11px] text-term-muted">Cmd+Enter to execute</p>
+            <p class="mt-2 font-mono text-[11px] text-term-muted">Cmd+Enter to execute</p>
         </div>
-        <div class="flex items-center justify-between border-b border-term-border bg-term-panel/80 px-4 py-3 font-mono text-sm">
+        <div class="flex items-center justify-between border-b border-term-border bg-term-panel/80 px-5 py-4 font-mono text-sm gap-4">
             <span class="text-term-text-dim">db: <span class="text-term-accent">{{ $currentDb }}</span></span>
             <button type="submit" class="btn-primary font-mono inline-flex items-center gap-1.5" id="query-submit-btn"><i data-lucide="play" class="w-4 h-4 shrink-0"></i> execute</button>
         </div>
@@ -26,15 +26,15 @@
     <div id="query-cell-modal" class="modal-backdrop fixed inset-0 z-50 hidden flex items-center justify-center p-4" role="dialog" aria-modal="true">
         <div class="modal-overlay absolute inset-0 bg-black/60 backdrop-blur-sm" data-modal-close></div>
         <div class="modal-panel relative z-10 w-full max-w-md rounded-lg border border-term-border bg-term-panel shadow-xl">
-            <div class="border-b border-term-border px-5 py-4">
+            <div class="border-b border-term-border px-6 py-5">
                 <h2 id="query-cell-modal-title" class="font-mono text-lg font-semibold text-term-text">Cell</h2>
             </div>
-            <div class="px-5 py-4 font-mono text-sm text-term-text-dim space-y-2">
+            <div class="px-6 py-5 font-mono text-sm text-term-text-dim space-y-2">
                 <p class="text-term-text-dim text-xs" id="query-cell-modal-column"></p>
-                <div class="rounded border border-term-border bg-term-bg/50 px-3 py-2 text-term-text break-all" id="query-cell-modal-value"></div>
+                <div class="rounded-lg border border-term-border bg-term-bg/50 px-4 py-3 text-term-text break-all" id="query-cell-modal-value"></div>
                 <div id="query-cell-modal-link" class="hidden mt-2"></div>
             </div>
-            <div class="border-t border-term-border px-5 py-4">
+            <div class="border-t border-term-border px-6 py-5">
                 <button type="button" class="btn-secondary font-mono text-sm inline-flex items-center gap-1.5" data-modal-close><i data-lucide="x" class="w-4 h-4 shrink-0"></i> Close</button>
             </div>
         </div>
@@ -56,10 +56,13 @@
     @if(isset($result) && $result && !empty($result['fields'] ?? []))
     <div class="card mt-6 overflow-hidden">
         <div class="card-header flex flex-wrap items-center justify-between gap-2">
-            <span class="font-mono text-term-text-dim">{{ $result['rowCount'] ?? 0 }} row{{ ($result['rowCount'] ?? 0) !== 1 ? 's' : '' }} returned</span>
-            @if(isset($result['total']) && $result['total'] > count($result['rows'] ?? []))
-            <span class="font-mono text-xs text-term-muted">(showing first {{ count($result['rows'] ?? []) }})</span>
-            @endif
+            <div class="flex flex-wrap items-center gap-3">
+                <span class="font-mono text-term-text-dim">{{ $result['rowCount'] ?? 0 }} row{{ ($result['rowCount'] ?? 0) !== 1 ? 's' : '' }} returned</span>
+                @if(isset($result['total']) && $result['total'] > count($result['rows'] ?? []))
+                <span class="font-mono text-xs text-term-muted">(showing first {{ count($result['rows'] ?? []) }})</span>
+                @endif
+                <button type="button" class="btn-secondary text-sm font-mono inline-flex items-center gap-1.5" id="query-create-view-btn" data-create-view data-create-view-url="{{ route('query.create-view') }}" data-csrf="{{ csrf_token() }}"><i data-lucide="layers" class="w-4 h-4 shrink-0"></i> Create view</button>
+            </div>
             @include('partials.pagination', [
                 'total' => $result['total'] ?? count($result['rows'] ?? []),
                 'limit' => $result['limit'] ?? 100,
@@ -104,6 +107,39 @@
         @if(empty($result['rows'] ?? []))
         <div class="px-6 py-8 text-center font-mono text-term-text-dim">no rows.</div>
         @endif
+    </div>
+
+    {{-- Create view modal: save current SELECT as a view --}}
+    <div id="create-view-modal" class="modal-backdrop fixed inset-0 z-50 hidden flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="create-view-modal-title">
+        <div class="modal-overlay absolute inset-0 bg-black/60 backdrop-blur-sm" data-modal-close></div>
+        <div class="modal-panel relative z-10 w-full max-w-lg max-h-[90vh] overflow-hidden rounded-lg border border-term-border bg-term-panel shadow-xl flex flex-col">
+            <div class="border-b border-term-border px-6 py-5 shrink-0">
+                <h2 id="create-view-modal-title" class="font-mono text-lg font-semibold text-term-text">Create view</h2>
+            </div>
+            <div class="modal-body px-6 py-5 overflow-y-auto font-mono text-sm space-y-4">
+                <div>
+                    <label for="create-view-schema" class="block text-term-text-dim text-xs mb-1">Schema</label>
+                    <select id="create-view-schema" class="input w-full py-2 text-xs">
+                        @foreach($schemas ?? ['public'] as $s)
+                        <option value="{{ e($s) }}" {{ $s === 'public' ? 'selected' : '' }}>{{ $s }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label for="create-view-name" class="block text-term-text-dim text-xs mb-1">View name</label>
+                    <input type="text" id="create-view-name" class="input w-full py-2 text-xs" placeholder="my_view" />
+                </div>
+                <div>
+                    <label for="create-view-sql" class="block text-term-text-dim text-xs mb-1">Query (read-only)</label>
+                    <textarea id="create-view-sql" class="input w-full font-mono text-xs resize-y min-h-[120px]" readonly></textarea>
+                </div>
+                <div id="create-view-error" class="hidden text-term-danger text-xs"></div>
+            </div>
+            <div class="modal-footer flex justify-end gap-3 border-t border-term-border px-6 py-5 shrink-0">
+                <button type="button" class="modal-cancel btn-secondary font-mono text-sm inline-flex items-center gap-1.5" data-modal-close><i data-lucide="x" class="w-4 h-4 shrink-0"></i> Cancel</button>
+                <button type="button" class="btn-primary font-mono text-sm inline-flex items-center gap-1.5" id="create-view-submit"><i data-lucide="layers" class="w-4 h-4 shrink-0"></i> Create view</button>
+            </div>
+        </div>
     </div>
     @endif
     @if(isset($message) && $message && empty($result['fields'] ?? []))
@@ -233,6 +269,62 @@
                     }
                     document.getElementById('query-cell-modal').classList.remove('hidden');
                 }
+            });
+        }
+
+        var createViewBtn = document.getElementById('query-create-view-btn');
+        var createViewModal = document.getElementById('create-view-modal');
+        if (createViewBtn && createViewModal) {
+            var createViewSchema = document.getElementById('create-view-schema');
+            var createViewName = document.getElementById('create-view-name');
+            var createViewSql = document.getElementById('create-view-sql');
+            var createViewError = document.getElementById('create-view-error');
+            var createViewSubmit = document.getElementById('create-view-submit');
+            createViewBtn.addEventListener('click', function() {
+                createViewSql.value = (sqlInput && sqlInput.value) ? sqlInput.value.trim() : '';
+                createViewName.value = '';
+                createViewError.classList.add('hidden');
+                createViewError.textContent = '';
+                createViewModal.classList.remove('hidden');
+                if (window.refreshLucideIcons) window.refreshLucideIcons();
+            });
+            createViewSubmit.addEventListener('click', function() {
+                var schema = createViewSchema ? createViewSchema.value : 'public';
+                var name = (createViewName && createViewName.value) ? createViewName.value.trim() : '';
+                var sql = (createViewSql && createViewSql.value) ? createViewSql.value.trim() : '';
+                createViewError.classList.add('hidden');
+                if (!name) {
+                    createViewError.textContent = 'View name is required.';
+                    createViewError.classList.remove('hidden');
+                    return;
+                }
+                createViewSubmit.disabled = true;
+                fetch(createViewBtn.dataset.createViewUrl || '', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': createViewBtn.dataset.csrf || '',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({ schema: schema, name: name, sql: sql })
+                })
+                .then(function(r) { return r.json().then(function(j) { return { ok: r.ok, json: j }; }); })
+                .then(function(res) {
+                    createViewSubmit.disabled = false;
+                    if (res.ok && res.json.success) {
+                        createViewModal.classList.add('hidden');
+                        alert(res.json.message || 'View created.');
+                    } else {
+                        createViewError.textContent = res.json.error || 'Failed to create view.';
+                        createViewError.classList.remove('hidden');
+                    }
+                })
+                .catch(function() {
+                    createViewSubmit.disabled = false;
+                    createViewError.textContent = 'Network error.';
+                    createViewError.classList.remove('hidden');
+                });
             });
         }
     })();

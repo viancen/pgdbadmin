@@ -53,7 +53,7 @@
 
         <section class="mt-24 animate-fade-in" style="animation-delay: 0.25s">
             <div class="card overflow-hidden border-term-accent/20">
-                <div class="border-b border-term-border bg-term-panel/80 px-4 py-2 font-mono text-xs text-term-text-dim">
+                <div class="border-b border-term-border bg-term-panel/80 px-5 py-4 font-mono text-xs text-term-text-dim">
                     <span class="text-term-amber">●</span> postgres@localhost — psql compatible
                 </div>
                 <div class="space-y-1 p-4 font-mono text-sm">
