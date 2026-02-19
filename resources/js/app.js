@@ -14,6 +14,10 @@ createInertiaApp({
     setup({ el, App, props, plugin }) {
         const app = createApp({ render: () => h(App, props) });
         app.use(plugin);
+        // Ziggy route() is on window from @routes; expose it for Vue templates
+        app.config.globalProperties.route = typeof window !== 'undefined' && typeof window.route === 'function'
+            ? window.route
+            : () => '#';
         app.mount(el);
     },
 });
