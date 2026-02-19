@@ -113,3 +113,11 @@
 .bg-landing-gradient {
     background-image: var(--background-image-landing-gradient);
 }
+
+/* App layout: sidebar + main (DataGrip-style) */
+.app-sidebar {
+    flex-shrink: 0;
+}
+.app-main {
+    background-color: var(--color-term-bg);
+}

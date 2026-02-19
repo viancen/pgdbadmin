@@ -1,17 +1,16 @@
 @extends('layout')
 
 @section('content')
-<div class="mx-auto max-w-7xl px-4 py-8">
-    <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
+<div class="p-6">
+    <div class="mb-6 flex items-center justify-between border-b border-term-border pb-4">
         <div>
-            <p class="font-mono text-xs text-term-text-dim">database</p>
-            <h1 class="font-mono text-2xl font-semibold text-term-text"><span class="text-term-accent">{{ $currentDb }}</span></h1>
+            <h1 class="font-mono text-lg font-semibold text-term-text">Tables</h1>
+            <p class="mt-0.5 font-mono text-xs text-term-text-dim">database: <span class="text-term-accent">{{ $currentDb ?? $sidebarCurrentDb ?? '' }}</span></p>
         </div>
-        <a href="{{ route('query.index') }}" class="btn-primary font-mono">run sql</a>
     </div>
     <div class="card overflow-hidden">
         <div class="card-header">
-            <h2 class="font-mono font-medium text-term-text">tables</h2>
+            <h2 class="font-mono text-sm font-medium text-term-text">All tables</h2>
             <p class="mt-0.5 text-xs text-term-text-dim">Click a table to browse data or view structure</p>
         </div>
         @if(isset($error) && $error)

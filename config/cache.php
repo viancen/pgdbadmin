@@ -15,7 +15,8 @@ return [
     |
     */
 
-    'default' => env('CACHE_STORE', 'database'),
+    // Use 'array' so no sensitive data is persisted (in-memory per request only).
+    'default' => env('CACHE_STORE', 'array'),
 
     /*
     |--------------------------------------------------------------------------

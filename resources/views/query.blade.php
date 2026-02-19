@@ -1,7 +1,7 @@
 @extends('layout')
 
 @section('content')
-<div class="mx-auto max-w-7xl px-4 py-8">
+<div class="p-6">
     <div class="mb-6">
         <p class="font-mono text-xs text-term-text-dim">sql console</p>
         <h1 class="font-mono text-2xl font-semibold text-term-text">query</h1>

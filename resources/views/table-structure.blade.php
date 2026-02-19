@@ -1,7 +1,7 @@
 @extends('layout')
 
 @section('content')
-<div class="mx-auto max-w-7xl px-4 py-8">
+<div class="p-6">
     <div class="mb-6 flex flex-wrap items-center gap-4">
         <a href="{{ route('home') }}" class="btn-ghost text-sm font-mono">← database</a>
         <div>

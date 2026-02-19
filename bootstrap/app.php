@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'pg.auth' => \App\Http\Middleware\EnsurePgCredentials::class,
         ]);
+        $middleware->append(\App\Http\Middleware\PreventResponseCaching::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

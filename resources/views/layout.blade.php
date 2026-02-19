@@ -9,12 +9,16 @@
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="min-h-screen font-mono bg-term-bg text-term-text">
+<body class="min-h-screen font-mono bg-term-bg text-term-text {{ (!isset($showNav) || $showNav) ? 'flex' : '' }}">
     @if(!isset($showNav) || $showNav)
-        @include('partials.nav')
+        @include('partials.sidebar')
+        <main class="app-main min-h-screen min-w-0 flex-1 overflow-auto">
+            @yield('content')
+        </main>
+    @else
+        <main>
+            @yield('content')
+        </main>
     @endif
-    <main class="{{ (!isset($showNav) || $showNav) ? 'pt-12' : '' }}">
-        @yield('content')
-    </main>
 </body>
 </html>
