@@ -17,9 +17,18 @@
         </div>
         <div class="flex items-center justify-between border-b border-term-border bg-term-panel/80 px-4 py-3 font-mono text-sm">
             <span class="text-term-text-dim">db: <span class="text-term-accent">{{ $currentDb }}</span></span>
-            <button type="submit" class="btn-primary font-mono">execute</button>
+            <button type="submit" class="btn-primary font-mono" id="query-submit-btn">execute</button>
         </div>
     </form>
+
+    {{-- Confirmation modal for DELETE / TRUNCATE / UPDATE --}}
+    @include('partials.modal', [
+        'id' => 'query-confirm-modal',
+        'title' => 'Confirm destructive query',
+        'body' => '<p class="mb-2">This query will modify or remove data. Please confirm:</p><pre id="query-confirm-sql" class="rounded border border-term-border bg-term-bg p-3 text-xs overflow-x-auto whitespace-pre-wrap break-all text-term-danger"></pre>',
+        'confirmLabel' => 'Execute',
+        'cancelLabel' => 'Cancel',
+    ])
     @if(isset($error) && $error)
     <div class="mt-4 rounded border border-term-danger/50 bg-term-danger/10 px-4 py-3 font-mono text-sm text-term-danger">
         {{ $error }}
@@ -84,27 +93,55 @@
     </div>
     @endif
 
-    @if(isset($result) && $result && !empty($result['fields'] ?? []))
     <script>
     (function() {
         var form = document.getElementById('query-form');
-        var sortInput = document.getElementById('query-sort');
-        var dirInput = document.getElementById('query-dir');
-        var table = document.querySelector('.data-table[data-sort]');
-        if (!form || !sortInput || !dirInput || !table) return;
-        var currentSort = table.dataset.sort || '';
-        var currentDir = (table.dataset.dir || 'ASC').toUpperCase();
-        table.querySelectorAll('.query-sort-header').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                var col = this.dataset.column;
-                var nextDir = (currentSort === col && currentDir === 'DESC') ? 'ASC' : 'DESC';
-                sortInput.value = col;
-                dirInput.value = nextDir;
+        var sqlInput = document.getElementById('sql');
+        var confirmModal = document.getElementById('query-confirm-modal');
+        var confirmSqlEl = document.getElementById('query-confirm-sql');
+        if (!form || !sqlInput) return;
+
+        function isDestructive(sql) {
+            var t = (sql || '').trim();
+            return /^\s*(DELETE|TRUNCATE|UPDATE)\s+/i.test(t);
+        }
+
+        form.addEventListener('submit', function(e) {
+            if (form.dataset.confirmed === '1') {
+                delete form.dataset.confirmed;
+                return;
+            }
+            if (!isDestructive(sqlInput.value)) return;
+            e.preventDefault();
+            if (confirmSqlEl) confirmSqlEl.textContent = sqlInput.value;
+            if (confirmModal) confirmModal.classList.remove('hidden');
+        });
+
+        if (confirmModal) {
+            confirmModal.querySelector('.modal-confirm').addEventListener('click', function() {
+                confirmModal.classList.add('hidden');
+                form.dataset.confirmed = '1';
                 form.submit();
             });
-        });
+        }
+
+        var table = document.querySelector('.data-table[data-sort]');
+        if (table) {
+            var sortInput = document.getElementById('query-sort');
+            var dirInput = document.getElementById('query-dir');
+            var currentSort = table.dataset.sort || '';
+            var currentDir = (table.dataset.dir || 'ASC').toUpperCase();
+            table.querySelectorAll('.query-sort-header').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var col = this.dataset.column;
+                    var nextDir = (currentSort === col && currentDir === 'DESC') ? 'ASC' : 'DESC';
+                    sortInput.value = col;
+                    dirInput.value = nextDir;
+                    form.submit();
+                });
+            });
+        }
     })();
     </script>
-    @endif
 </div>
 @endsection

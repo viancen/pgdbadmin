@@ -20,5 +20,35 @@
             @yield('content')
         </main>
     @endif
+    <script>
+    document.addEventListener('click', function(e) {
+        var close = e.target.closest('[data-modal-close]');
+        if (close) {
+            var backdrop = close.closest('.modal-backdrop');
+            if (backdrop) backdrop.classList.add('hidden');
+            return;
+        }
+        var open = e.target.closest('[data-modal]');
+        if (open && open.dataset.modal) {
+            var el = document.getElementById(open.dataset.modal);
+            if (el) {
+                el.classList.remove('hidden');
+                if (open.dataset.modalSubmit) el.dataset.submit = open.dataset.modalSubmit;
+            }
+            return;
+        }
+        var confirmBtn = e.target.closest('.modal-confirm');
+        if (confirmBtn) {
+            var backdrop = confirmBtn.closest('.modal-backdrop');
+            if (backdrop) {
+                if (backdrop.dataset.submit) {
+                    var form = document.getElementById(backdrop.dataset.submit);
+                    if (form) form.submit();
+                }
+                backdrop.classList.add('hidden');
+            }
+        }
+    });
+    </script>
 </body>
 </html>

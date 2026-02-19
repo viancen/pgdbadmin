@@ -97,6 +97,7 @@ class TableController extends Controller
 
         try {
             $columns = $this->pg->tableStructure($pdo, $schema, $table);
+            $constraints = $this->pg->getTableConstraints($pdo, $schema, $table);
         } catch (\Throwable $e) {
             abort(500, $e->getMessage());
         }
@@ -106,11 +107,106 @@ class TableController extends Controller
             'schema' => $schema,
             'tableName' => $table,
             'columns' => $columns,
+            'constraints' => $constraints,
             'currentDb' => $currentDb,
             'databases' => $request->session()->get('pg_databases', []),
             'user' => $credentials['user'],
             'host' => $credentials['host'],
         ]);
+    }
+
+    /**
+     * Preview or execute a column DDL change. POST with action=preview|execute.
+     * Body: action, (alter: column, type?, notnull?, default?) | (add: name, type, notnull?, default?) | (drop: column)
+     */
+    public function columnDdl(Request $request, string $schema, string $table): JsonResponse
+    {
+        $credentials = $request->session()->get('pg_credentials');
+        $currentDb = $request->session()->get('pg_current_db');
+        $pdo = $this->pg->getConnection($credentials, $currentDb);
+
+        if (! $pdo) {
+            return response()->json(['error' => 'Not authenticated'], 401);
+        }
+
+        $action = $request->input('action'); // preview | execute
+        $quotedTable = '"' . str_replace('"', '""', $schema) . '"."' . str_replace('"', '""', $table) . '"';
+
+        $ddl = $request->input('ddl'); // when executing, we send the exact DDL to run (from preview)
+        if ($action === 'execute' && $ddl) {
+            if (! preg_match('/^\s*ALTER\s+TABLE\s+/i', $ddl)) {
+                return response()->json(['error' => 'Invalid DDL'], 422);
+            }
+            try {
+                $this->pg->executeDdl($pdo, $ddl);
+                return response()->json(['success' => true]);
+            } catch (\Throwable $e) {
+                return response()->json(['error' => $e->getMessage()], 422);
+            }
+        }
+
+        $op = $request->input('op'); // alter | add | drop
+        $sql = null;
+
+        if ($op === 'alter') {
+            $column = $request->input('column');
+            if (! $column || ! is_string($column)) {
+                return response()->json(['error' => 'Column name required'], 422);
+            }
+            $qcol = '"' . str_replace('"', '""', $column) . '"';
+            $type = $request->input('type');
+            $notnull = $request->input('notnull');
+            $default = $request->input('default');
+            $parts = [];
+            if ($type) {
+                $parts[] = "ALTER TABLE {$quotedTable} ALTER COLUMN {$qcol} TYPE {$type}";
+            }
+            if ($notnull !== null && $notnull !== '') {
+                $parts[] = "ALTER TABLE {$quotedTable} ALTER COLUMN {$qcol} " . ($notnull === '1' || $notnull === true ? 'SET NOT NULL' : 'DROP NOT NULL');
+            }
+            if (array_key_exists('default', $request->all())) {
+                $parts[] = "ALTER TABLE {$quotedTable} ALTER COLUMN {$qcol} " . ($default !== null && $default !== '' ? "SET DEFAULT " . $default : 'DROP DEFAULT');
+            }
+            $sql = $parts ? implode('; ', $parts) : null;
+        } elseif ($op === 'add') {
+            $name = $request->input('name');
+            $type = $request->input('type');
+            if (! $name || ! $type || ! is_string($name) || ! is_string($type)) {
+                return response()->json(['error' => 'Name and type required'], 422);
+            }
+            $qname = '"' . str_replace('"', '""', $name) . '"';
+            $notnull = $request->input('notnull');
+            $default = $request->input('default');
+            $sql = "ALTER TABLE {$quotedTable} ADD COLUMN {$qname} {$type}";
+            if ($notnull === '1' || $notnull === true) {
+                $sql .= ' NOT NULL';
+            }
+            if ($default !== null && $default !== '') {
+                $sql .= ' DEFAULT ' . $default;
+            }
+        } elseif ($op === 'drop') {
+            $column = $request->input('column');
+            if (! $column || ! is_string($column)) {
+                return response()->json(['error' => 'Column name required'], 422);
+            }
+            $qcol = '"' . str_replace('"', '""', $column) . '"';
+            $sql = "ALTER TABLE {$quotedTable} DROP COLUMN {$qcol}";
+        }
+
+        if (! $sql) {
+            return response()->json(['error' => 'No change specified'], 422);
+        }
+
+        if ($action === 'execute') {
+            try {
+                $this->pg->executeDdl($pdo, $sql);
+                return response()->json(['success' => true]);
+            } catch (\Throwable $e) {
+                return response()->json(['error' => $e->getMessage()], 422);
+            }
+        }
+
+        return response()->json(['sql' => $sql]);
     }
 
     /**

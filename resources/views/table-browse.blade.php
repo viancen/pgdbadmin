@@ -68,15 +68,13 @@
                             </a>
                         </th>
                         @endforeach
-                        @if($canEditRows)
-                        <th class="whitespace-nowrap w-0 text-term-text-dim">edit</th>
-                        @endif
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($rows ?? [] as $row)
                     <tr class="table-browse-row {{ $canEditRows ? 'cursor-pointer' : '' }}"
-                        data-row="{{ json_encode($row) }}">
+                        data-row="{{ json_encode($row) }}"
+                        @if($canEditRows) title="Double-click to edit" @endif>
                         @foreach($fields ?? [] as $f)
                         @php $meta = $columnMeta[$f->name] ?? null; $isPk = $meta['is_pk'] ?? false; @endphp
                         <td class="max-w-xs truncate font-mono text-xs table-browse-cell"
@@ -91,9 +89,6 @@
                             @endif
                         </td>
                         @endforeach
-                        @if($canEditRows)
-                        <td class="w-0 p-0"></td>
-                        @endif
                     </tr>
                     @endforeach
                 </tbody>
@@ -106,6 +101,22 @@
 </div>
 
 @if($canEditRows)
+{{-- Edit row modal: double-click a row to open --}}
+<div id="row-edit-modal" class="modal-backdrop fixed inset-0 z-50 hidden flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="row-edit-modal-title">
+    <div class="modal-overlay absolute inset-0 bg-black/60 backdrop-blur-sm" data-modal-close></div>
+    <div class="modal-panel relative z-10 w-full max-w-lg max-h-[90vh] overflow-hidden rounded-lg border border-term-border bg-term-panel shadow-xl flex flex-col">
+        <div class="border-b border-term-border px-5 py-4 shrink-0">
+            <h2 id="row-edit-modal-title" class="font-mono text-lg font-semibold text-term-text">Edit record</h2>
+        </div>
+        <div class="modal-body px-5 py-4 overflow-y-auto font-mono text-sm text-term-text-dim space-y-3" id="row-edit-form-container"></div>
+        <div class="modal-footer flex justify-end gap-2 border-t border-term-border px-5 py-4 shrink-0">
+            <button type="button" class="modal-cancel btn-secondary font-mono text-sm" data-modal-close>Cancel</button>
+            <button type="button" class="row-edit-save btn-primary font-mono text-sm">Save</button>
+        </div>
+        <div id="row-edit-error" class="hidden px-5 pb-4 text-term-danger text-xs font-mono"></div>
+    </div>
+</div>
+
 <script>
 (function() {
     const table = document.getElementById('table-browse-data');
@@ -113,6 +124,11 @@
     const updateUrl = table.dataset.updateUrl;
     const csrf = table.dataset.csrf;
     const columnMeta = JSON.parse(table.dataset.columnMeta || '{}');
+    const modal = document.getElementById('row-edit-modal');
+    const formContainer = document.getElementById('row-edit-form-container');
+    const saveBtn = document.querySelector('.row-edit-save');
+    const errorEl = document.getElementById('row-edit-error');
+    let currentTr = null;
 
     function numericType(type) {
         if (!type) return false;
@@ -139,214 +155,179 @@
         return 'text';
     }
 
-    table.querySelectorAll('.table-browse-row').forEach(function(tr) {
-        tr.addEventListener('click', function(e) {
-            if (tr.classList.contains('editing')) return;
-            if (e.target.closest('.table-browse-actions')) return;
-            enterEditMode(tr);
-        });
-    });
-
-    function enterEditMode(tr) {
-        const row = JSON.parse(tr.dataset.row || '{}');
-        tr.classList.add('editing');
-        tr.querySelectorAll('.table-browse-cell').forEach(function(td) {
-            const col = td.dataset.column;
-            const meta = columnMeta[col];
-            const isPk = meta && meta.is_pk;
-            const currentVal = row[col];
-            const displayVal = currentVal === null || currentVal === undefined ? '' : currentVal;
-
-            if (isPk) {
-                td.classList.add('bg-term-panel/50');
-                td.innerHTML = '<span class="text-term-muted font-mono text-xs">' + (displayVal === '' ? 'NULL' : escapeHtml(String(displayVal))) + '</span>';
-                td.setAttribute('data-raw-value', displayVal);
-                return;
-            }
-
-            const inputType = getInputType(meta);
-            let input;
-            if (inputType === 'checkbox') {
-                input = document.createElement('input');
-                input.type = 'checkbox';
-                input.checked = currentVal === true || currentVal === 't' || currentVal === '1' || currentVal === 'yes';
-                input.className = 'rounded border-term-border bg-term-bg text-term-accent focus:ring-term-accent';
-            } else {
-                input = document.createElement('input');
-                input.type = inputType;
-                input.value = displayVal;
-                input.className = 'input w-full min-w-0 py-1 text-xs font-mono';
-            }
-            input.dataset.column = col;
-            td.innerHTML = '';
-            td.classList.add('bg-term-panel/50');
-            td.appendChild(input);
-            const err = document.createElement('div');
-            err.className = 'table-browse-cell-error text-term-danger text-xs mt-0.5 hidden';
-            td.appendChild(err);
-
-            input.addEventListener('blur', function() {
-                const val = inputType === 'checkbox' ? (input.checked ? 't' : 'f') : input.value;
-                const msg = validateCell(val, meta);
-                err.textContent = msg || '';
-                err.classList.toggle('hidden', !msg);
-            });
-        });
-
-        const actionsCell = tr.querySelector('td:last-child');
-        if (actionsCell && !actionsCell.querySelector('.table-browse-actions')) {
-            actionsCell.classList.remove('p-0');
-            actionsCell.classList.add('bg-term-panel/50', 'align-middle');
-            actionsCell.innerHTML = '<div class="table-browse-actions flex items-center gap-2"><button type="button" class="btn-primary table-browse-save text-xs">Save</button><button type="button" class="btn-ghost table-browse-cancel text-xs">Cancel</button></div>';
-            actionsCell.querySelector('.table-browse-save').addEventListener('click', function() { saveRow(tr); });
-            actionsCell.querySelector('.table-browse-cancel').addEventListener('click', function() { cancelEdit(tr); });
-        }
-    }
-
     function escapeHtml(s) {
         const div = document.createElement('div');
         div.textContent = s;
         return div.innerHTML;
     }
 
-    function getEditedValues(tr) {
-        const row = JSON.parse(tr.dataset.row || '{}');
-        const pk = {};
-        const updates = {};
-        const meta = columnMeta;
-        tr.querySelectorAll('.table-browse-cell').forEach(function(td) {
-            const col = td.dataset.column;
-            if (!col) return;
-            const m = meta[col];
-            if (m && m.is_pk) {
-                pk[col] = row[col];
-                return;
-            }
-            const input = td.querySelector('input');
-            if (!input) return;
-            let val = input.type === 'checkbox' ? (input.checked ? 't' : 'f') : input.value;
-            if (val === '' && (m && m.notnull)) return;
-            updates[col] = val === '' ? null : val;
+    table.querySelectorAll('.table-browse-row').forEach(function(tr) {
+        tr.addEventListener('dblclick', function() {
+            if (!tr.dataset.row) return;
+            currentTr = tr;
+            const row = JSON.parse(tr.dataset.row || '{}');
+            formContainer.innerHTML = '';
+            errorEl.classList.add('hidden');
+            errorEl.textContent = '';
+
+            const columns = tr.querySelectorAll('.table-browse-cell[data-column]');
+            columns.forEach(function(td) {
+                const col = td.dataset.column;
+                const meta = columnMeta[col];
+                const isPk = meta && meta.is_pk;
+                const currentVal = row[col];
+                const displayVal = currentVal === null || currentVal === undefined ? '' : currentVal;
+
+                const rowEl = document.createElement('div');
+                rowEl.className = 'space-y-1';
+                const label = document.createElement('label');
+                label.className = 'block text-term-text-dim text-xs';
+                label.textContent = col + (isPk ? ' (primary key)' : '');
+                rowEl.appendChild(label);
+
+                if (isPk) {
+                    const readOnly = document.createElement('div');
+                    readOnly.className = 'rounded border border-term-border bg-term-bg/50 px-3 py-2 text-term-text font-mono text-xs';
+                    readOnly.textContent = displayVal === '' ? 'NULL' : displayVal;
+                    rowEl.appendChild(readOnly);
+                } else {
+                    const inputType = getInputType(meta);
+                    let input;
+                    if (inputType === 'checkbox') {
+                        input = document.createElement('input');
+                        input.type = 'checkbox';
+                        input.checked = currentVal === true || currentVal === 't' || currentVal === '1' || currentVal === 'yes';
+                        input.className = 'rounded border-term-border bg-term-bg text-term-accent focus:ring-term-accent';
+                    } else {
+                        input = document.createElement('input');
+                        input.type = inputType;
+                        input.value = displayVal;
+                        input.className = 'input w-full py-1.5 text-xs font-mono';
+                    }
+                    input.dataset.column = col;
+                    input.name = col;
+                    rowEl.appendChild(input);
+                    const err = document.createElement('div');
+                    err.className = 'row-edit-field-error text-term-danger text-xs hidden';
+                    rowEl.appendChild(err);
+                }
+                formContainer.appendChild(rowEl);
+            });
+
+            modal.classList.remove('hidden');
         });
-        return { pk, updates };
+    });
+
+    function getPkFromRow(row) {
+        const pk = {};
+        Object.keys(columnMeta).forEach(function(col) {
+            if (columnMeta[col] && columnMeta[col].is_pk) pk[col] = row[col];
+        });
+        return pk;
     }
 
-    function collectValidationErrors(tr) {
-        const errors = {};
-        tr.querySelectorAll('.table-browse-cell').forEach(function(td) {
-            const col = td.dataset.column;
-            const input = td.querySelector('input');
-            if (!input || !columnMeta[col] || columnMeta[col].is_pk) return;
+    function getUpdatesFromModal() {
+        const updates = {};
+        formContainer.querySelectorAll('input[data-column]').forEach(function(input) {
+            const col = input.dataset.column;
+            const meta = columnMeta[col];
+            if (meta && meta.is_pk) return;
             const val = input.type === 'checkbox' ? (input.checked ? 't' : 'f') : input.value;
-            const msg = validateCell(val, columnMeta[col]);
+            updates[col] = val === '' ? null : val;
+        });
+        return updates;
+    }
+
+    function collectValidationErrors() {
+        const errors = {};
+        formContainer.querySelectorAll('input[data-column]').forEach(function(input) {
+            const col = input.dataset.column;
+            const meta = columnMeta[col];
+            if (meta && meta.is_pk) return;
+            const val = input.type === 'checkbox' ? (input.checked ? 't' : 'f') : input.value;
+            const msg = validateCell(val, meta);
             if (msg) errors[col] = msg;
         });
         return errors;
     }
 
-    function saveRow(tr) {
-        const errs = collectValidationErrors(tr);
-        tr.querySelectorAll('.table-browse-cell-error').forEach(function(el) {
+    function showFieldErrors(errors) {
+        formContainer.querySelectorAll('.row-edit-field-error').forEach(function(el) {
             el.textContent = '';
             el.classList.add('hidden');
         });
-        let hasError = false;
-        Object.keys(errs).forEach(function(col) {
-            const td = tr.querySelector('[data-column="' + col + '"]');
-            if (td) {
-                const errEl = td.querySelector('.table-browse-cell-error');
+        Object.keys(errors).forEach(function(col) {
+            const input = formContainer.querySelector('input[data-column="' + col + '"]');
+            if (input && input.parentNode) {
+                const errEl = input.parentNode.querySelector('.row-edit-field-error');
                 if (errEl) {
-                    errEl.textContent = errs[col];
-                    errEl.classList.remove('hidden');
-                    hasError = true;
-                }
-            }
-        });
-        if (hasError) return;
-
-        const { pk, updates } = getEditedValues(tr);
-        if (Object.keys(updates).length === 0) {
-            cancelEdit(tr);
-            return;
-        }
-
-        const body = JSON.stringify({ pk, updates });
-        const saveBtn = tr.querySelector('.table-browse-save');
-        if (saveBtn) saveBtn.disabled = true;
-
-        fetch(updateUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': csrf,
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: body
-        })
-        .then(function(r) { return r.json().then(function(j) { return { ok: r.ok, json: j }; }); })
-        .then(function({ ok, json }) {
-            if (saveBtn) saveBtn.disabled = false;
-            if (ok && json.success) {
-                Object.keys(updates).forEach(function(col) {
-                    const row = JSON.parse(tr.dataset.row || '{}');
-                    row[col] = updates[col];
-                    tr.dataset.row = JSON.stringify(row);
-                });
-                cancelEdit(tr);
-            } else {
-                const msg = json.error || 'Update failed';
-                const actionsCell = tr.querySelector('td:last-child');
-                if (actionsCell) {
-                    let errEl = actionsCell.querySelector('.table-browse-row-error');
-                    if (!errEl) {
-                        errEl = document.createElement('div');
-                        errEl.className = 'table-browse-row-error text-term-danger text-xs mt-1';
-                        actionsCell.querySelector('.table-browse-actions').appendChild(errEl);
-                    }
-                    errEl.textContent = msg;
+                    errEl.textContent = errors[col];
                     errEl.classList.remove('hidden');
                 }
-            }
-        })
-        .catch(function(e) {
-            if (saveBtn) saveBtn.disabled = false;
-            const actionsCell = tr.querySelector('td:last-child');
-            if (actionsCell) {
-                let errEl = actionsCell.querySelector('.table-browse-row-error');
-                if (!errEl) {
-                    errEl = document.createElement('div');
-                    errEl.className = 'table-browse-row-error text-term-danger text-xs mt-1';
-                    actionsCell.querySelector('.table-browse-actions').appendChild(errEl);
-                }
-                errEl.textContent = e.message || 'Network error';
-                errEl.classList.remove('hidden');
             }
         });
     }
 
-    function cancelEdit(tr) {
-        const row = JSON.parse(tr.dataset.row || '{}');
-        tr.classList.remove('editing');
-        tr.querySelectorAll('.table-browse-cell').forEach(function(td) {
-            const col = td.dataset.column;
-            const meta = columnMeta[col];
-            const isPk = meta && meta.is_pk;
-            const val = row[col];
-            td.classList.remove('bg-term-panel/50');
-            td.innerHTML = '';
-            if (val === null || val === undefined) {
-                td.innerHTML = '<span class="text-term-muted">NULL</span>';
-            } else {
-                td.textContent = val;
+    if (saveBtn) {
+        saveBtn.addEventListener('click', function() {
+            if (!currentTr) return;
+            const row = JSON.parse(currentTr.dataset.row || '{}');
+            const pk = getPkFromRow(row);
+            const errs = collectValidationErrors();
+            if (Object.keys(errs).length) {
+                showFieldErrors(errs);
+                return;
             }
+            const updates = getUpdatesFromModal();
+            if (Object.keys(updates).length === 0) {
+                modal.classList.add('hidden');
+                currentTr = null;
+                return;
+            }
+            errorEl.classList.add('hidden');
+            saveBtn.disabled = true;
+            fetch(updateUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrf,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ pk, updates })
+            })
+            .then(function(r) { return r.json().then(function(j) { return { ok: r.ok, json: j }; }); })
+            .then(function(res) {
+                saveBtn.disabled = false;
+                if (res.ok && res.json.success) {
+                    Object.keys(updates).forEach(function(col) {
+                        row[col] = updates[col];
+                    });
+                    currentTr.dataset.row = JSON.stringify(row);
+                    currentTr.querySelectorAll('.table-browse-cell[data-column]').forEach(function(td) {
+                        const col = td.dataset.column;
+                        if (updates[col] !== undefined) {
+                            const val = updates[col];
+                            if (val === null || val === undefined) {
+                                td.innerHTML = '<span class="text-term-muted">NULL</span>';
+                            } else {
+                                td.textContent = val;
+                            }
+                        }
+                    });
+                    modal.classList.add('hidden');
+                    currentTr = null;
+                } else {
+                    errorEl.textContent = res.json.error || 'Update failed';
+                    errorEl.classList.remove('hidden');
+                }
+            })
+            .catch(function() {
+                saveBtn.disabled = false;
+                errorEl.textContent = 'Network error';
+                errorEl.classList.remove('hidden');
+            });
         });
-        const actionsCell = tr.querySelector('td:last-child');
-        if (actionsCell) {
-            actionsCell.classList.add('p-0');
-            actionsCell.classList.remove('bg-term-panel/50', 'align-middle');
-            actionsCell.innerHTML = '';
-        }
     }
 })();
 </script>

@@ -214,6 +214,42 @@ class PgConnectionService
     }
 
     /**
+     * Get constraints for a table (primary key, unique, check, foreign key).
+     *
+     * @return array<int, object{name: string, type: string, definition: string}>
+     */
+    public function getTableConstraints(PDO $pdo, string $schema, string $table): array
+    {
+        $stmt = $pdo->prepare("
+            SELECT
+                c.conname AS name,
+                CASE c.contype
+                    WHEN 'p' THEN 'PRIMARY KEY'
+                    WHEN 'u' THEN 'UNIQUE'
+                    WHEN 'c' THEN 'CHECK'
+                    WHEN 'f' THEN 'FOREIGN KEY'
+                    ELSE c.contype::text
+                END AS type,
+                pg_get_constraintdef(c.oid, true) AS definition
+            FROM pg_constraint c
+            JOIN pg_class t ON c.conrelid = t.oid
+            JOIN pg_namespace n ON t.relnamespace = n.oid
+            WHERE n.nspname = ? AND t.relname = ?
+            ORDER BY c.conname
+        ");
+        $stmt->execute([$schema, $table]);
+        return $stmt->fetchAll(PDO::FETCH_OBJ);
+    }
+
+    /**
+     * Execute DDL (e.g. ALTER TABLE). Throws on error.
+     */
+    public function executeDdl(PDO $pdo, string $sql): void
+    {
+        $pdo->exec($sql);
+    }
+
+    /**
      * Execute raw SQL and return result for SELECT, or row count for other statements.
      *
      * @param  string|null  $orderBy  column name to order by (for SELECT only)

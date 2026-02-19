@@ -24,6 +24,9 @@
     --color-term-success: #00ff41;
     --color-term-cyan: #00d4ff;
     --color-term-muted: #4a6b4a;
+    /* Data/records: white on dark for readability, like reference table */
+    --color-term-data: #e8e8e8;
+    --color-term-data-line: rgba(255, 255, 255, 0.12);
 
     --shadow-term-glow: 0 0 20px -4px rgba(0, 255, 65, 0.25);
     --shadow-term-inner: inset 0 0 0 1px rgba(0, 255, 65, 0.08);
@@ -78,19 +81,46 @@
     }
 
     .table-container {
-        @apply overflow-x-auto border border-term-border bg-term-bg;
+        @apply overflow-x-auto bg-term-bg;
+        border: 1px solid var(--color-term-data-line);
     }
     .data-table {
         @apply w-full min-w-max text-left text-sm font-mono;
+        border-collapse: collapse;
     }
     .data-table th {
-        @apply border-b border-term-border bg-term-panel px-4 py-2.5 font-medium uppercase tracking-wider text-term-amber;
+        @apply px-4 py-2.5 font-medium uppercase tracking-wider;
+        color: var(--color-term-data);
+        border-bottom: 1px solid var(--color-term-data-line);
+        border-right: 1px solid var(--color-term-data-line);
+        background-color: rgba(0, 0, 0, 0.2);
+    }
+    .data-table th:last-child {
+        border-right: none;
     }
     .data-table td {
-        @apply border-b border-term-border/80 px-4 py-2 text-term-text-dim;
+        @apply px-4 py-2 font-mono text-sm;
+        color: var(--color-term-data);
+        border-bottom: 1px solid var(--color-term-data-line);
+        border-right: 1px solid var(--color-term-data-line);
     }
-    .data-table tr:hover td {
-        @apply bg-term-accent/5 text-term-text;
+    .data-table td:last-child {
+        border-right: none;
+    }
+    .data-table tbody tr:hover td {
+        background-color: rgba(255, 255, 255, 0.04);
+    }
+    .data-table td .text-term-muted {
+        color: rgba(255, 255, 255, 0.5);
+    }
+    .data-table th a,
+    .data-table th button {
+        color: inherit;
+    }
+    .data-table th a:hover,
+    .data-table th button:hover {
+        color: var(--color-term-data);
+        opacity: 1;
     }
 
     .badge {
@@ -112,6 +142,18 @@
 }
 .bg-landing-gradient {
     background-image: var(--background-image-landing-gradient);
+}
+
+/* Modals */
+.modal-backdrop {
+    transition: opacity 0.15s ease-out;
+}
+.modal-backdrop:not(.hidden) {
+    display: flex;
+}
+.modal-panel {
+    max-height: calc(100vh - 2rem);
+    overflow: auto;
 }
 
 /* App layout: sidebar + main (DataGrip-style) */
